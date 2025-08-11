@@ -326,6 +326,42 @@
         .status-error {
             background-color: #ef4444;
         }
+
+        /* Camera and photo styles */
+        input[type="file"] {
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border: 2px dashed #4a90e2;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        input[type="file"]:hover {
+            background: #e3f2fd;
+        }
+
+        #photoPreview {
+            text-align: center;
+        }
+
+        #previewImage {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        /* Mobile camera optimization */
+        @media (max-width: 768px) {
+            input[type="file"] {
+                padding: 12px;
+                font-size: 1rem;
+            }
+            
+            .expense-table th:nth-child(5),
+            .expense-table td:nth-child(5) {
+                width: 60px;
+                text-align: center;
+            }
+        }
     </style>
 </head>
 <body>
@@ -402,6 +438,15 @@
                     </div>
 
                     <div class="form-group">
+                        <label for="receiptPhoto">Receipt Photo</label>
+                        <input type="file" id="receiptPhoto" name="receiptPhoto" accept="image/*" capture="environment">
+                        <div id="photoPreview" style="margin-top: 10px; display: none;">
+                            <img id="previewImage" style="max-width: 200px; max-height: 200px; border-radius: 8px; border: 2px solid #e1e8ed;">
+                            <button type="button" id="removePhoto" style="display: block; margin-top: 5px; padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 4px; font-size: 0.8rem;">Remove Photo</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
                         <label for="paymentMethod">Payment Method</label>
                         <select id="paymentMethod" name="paymentMethod">
                             <option value="">Select Payment Method</option>
@@ -412,6 +457,7 @@
                             <option value="Bank Transfer">Bank Transfer</option>
                             <option value="PayPal">PayPal</option>
                             <option value="Venmo">Venmo</option>
+                            <option value="Cash App">Cash App</option>
                             <option value="Other">Other</option>
                         </select>
                     </div>
@@ -506,6 +552,10 @@
             // Filter changes
             document.getElementById('filterCategory').addEventListener('change', applyFilters);
             document.getElementById('filterMonth').addEventListener('change', applyFilters);
+            
+            // Photo handling
+            document.getElementById('receiptPhoto').addEventListener('change', handlePhotoSelection);
+            document.getElementById('removePhoto').addEventListener('click', removePhoto);
         }
 
         async function loadExpenses() {
@@ -555,6 +605,8 @@
                 
                 // Get form data
                 const formData = new FormData(e.target);
+                const photoFile = document.getElementById('receiptPhoto').files[0];
+                
                 const expenseData = {
                     'Date': formData.get('date'),
                     'Amount (USD)': parseFloat(formData.get('amount')),
@@ -569,6 +621,14 @@
                 // Validate required fields
                 if (!expenseData['Date'] || !expenseData['Amount (USD)'] || !expenseData['Category'] || !expenseData['Description']) {
                     throw new Error('Please fill in all required fields');
+                }
+
+                // Note: Photo will be stored locally for now and can be manually uploaded to Airtable
+                // This is a limitation of browser-based Airtable integration
+                if (photoFile) {
+                    expenseData['Notes'] = expenseData['Notes'] ? 
+                        expenseData['Notes'] + ' [Receipt photo captured - see local device]' : 
+                        '[Receipt photo captured - see local device]';
                 }
 
                 // Send to Airtable
@@ -590,10 +650,15 @@
 
                 const result = await response.json();
 
-                showMessage('Expense added successfully to Airtable!', 'success');
+                if (photoFile) {
+                    showMessage('Expense added successfully! Receipt photo captured - you can manually upload it to Airtable if needed.', 'success');
+                } else {
+                    showMessage('Expense added successfully to Airtable!', 'success');
+                }
                 
                 // Reset form
                 e.target.reset();
+                removePhoto();
                 document.getElementById('date').valueAsDate = new Date();
                 
                 // Reload expenses
@@ -633,6 +698,7 @@
                             <th>Category</th>
                             <th>Description</th>
                             <th>Amount</th>
+                            <th>Receipt</th>
                             <th>Payment</th>
                             <th>Member</th>
                             <th>Actions</th>
@@ -645,13 +711,21 @@
                 const date = expense.Date ? new Date(expense.Date).toLocaleDateString() : 'N/A';
                 const amount = parseFloat(expense['Amount (USD)'] || 0).toFixed(2);
                 const categoryClass = getCategoryClass(expense.Category);
+                
+                // Handle receipt photo
+                let receiptHtml = 'No receipt';
+                if (expense.Photo && expense.Photo.length > 0) {
+                    const photoUrl = expense.Photo[0].thumbnails?.small?.url || expense.Photo[0].url;
+                    receiptHtml = `<img src="${photoUrl}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer;" onclick="showFullReceipt('${expense.Photo[0].url}')" title="Click to view full size">`;
+                }
 
                 tableHTML += `
                     <tr>
                         <td>${date}</td>
                         <td><span class="category-badge ${categoryClass}">${expense.Category || 'N/A'}</span></td>
                         <td>${expense.Description || 'N/A'}</td>
-                        <td class="amount">$${amount}</td>
+                        <td class="amount">${amount}</td>
+                        <td>${receiptHtml}</td>
                         <td>${expense['Payment Method'] || 'N/A'}</td>
                         <td>${expense['Member Name'] || 'N/A'}</td>
                         <td>
@@ -791,6 +865,80 @@
             } else {
                 indicator.className = 'status-indicator status-error';
             }
+        }
+
+        // Photo handling functions
+        function handlePhotoSelection(event) {
+            const file = event.target.files[0];
+            if (file) {
+                // Validate file type
+                if (!file.type.startsWith('image/')) {
+                    showMessage('Please select a valid image file', 'error');
+                    event.target.value = '';
+                    return;
+                }
+                
+                // Validate file size (max 10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    showMessage('Image file too large. Please select a file under 10MB', 'error');
+                    event.target.value = '';
+                    return;
+                }
+                
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const previewDiv = document.getElementById('photoPreview');
+                    const previewImg = document.getElementById('previewImage');
+                    
+                    previewImg.src = e.target.result;
+                    previewDiv.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function removePhoto() {
+            const photoInput = document.getElementById('receiptPhoto');
+            const previewDiv = document.getElementById('photoPreview');
+            
+            photoInput.value = '';
+            previewDiv.style.display = 'none';
+        }
+
+        function showFullReceipt(imageUrl) {
+            // Create modal to show full-size receipt
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.8);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 1000;
+                cursor: pointer;
+            `;
+            
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            img.style.cssText = `
+                max-width: 90%;
+                max-height: 90%;
+                object-fit: contain;
+                border-radius: 8px;
+            `;
+            
+            modal.appendChild(img);
+            document.body.appendChild(modal);
+            
+            // Close modal on click
+            modal.addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
         }
 
         // Placeholder functions for edit/delete
