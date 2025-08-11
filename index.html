@@ -304,13 +304,11 @@
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <div class="header">
             <h1>Houston 100 Expense Tracker</h1>
             <p>Kingdom-focused financial stewardship and accountability</p>
         </div>
 
-        <!-- Dashboard Stats -->
         <div class="dashboard">
             <div class="stat-card">
                 <h3 id="totalThisMonth">$0.00</h3>
@@ -330,9 +328,7 @@
             </div>
         </div>
 
-        <!-- Main Content -->
         <div class="main-content">
-            <!-- Expense Form -->
             <div class="expense-form">
                 <h2>Add New Expense</h2>
                 <form id="expenseForm">
@@ -403,11 +399,9 @@
                 </form>
             </div>
 
-            <!-- Expense List -->
             <div class="expense-list">
                 <h2>Recent Expenses</h2>
                 
-                <!-- Filters -->
                 <div class="filters">
                     <div class="filter-group">
                         <label for="filterCategory">Filter by Category</label>
@@ -423,10 +417,8 @@
                     </div>
                 </div>
 
-                <!-- Messages -->
                 <div id="messages"></div>
 
-                <!-- Expense Table -->
                 <div id="expenseTableContainer">
                     <div class="loading">Loading expenses...</div>
                 </div>
@@ -436,7 +428,7 @@
 
     <script>
         // Configuration - API URL for Google Apps Script
-        const API_URL = 'https://script.google.com/macros/s/AKfycbzZRChgJKPWBA5HUM3RDI3JfIENuIpmBL8OAwCm3Sl6XFuBjvAgkDrFFNNlH4lpP4nD/exec';
+        const API_URL = 'https://script.googleusercontent.com/macros/echo?user_content_key=AeH5KzplWnHrTqNv-FmWdVWscNOwtenwI7dZfHKC2WHSdgg9hMFlFNfLGemqAVNjWjBjKcAWr9wZB-c7f9DeTRTjy4kzpE4oybT_QwTbuUPqzGoLh_Kqg/exec';
 
         // Global variables
         let expenses = [];
