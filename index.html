@@ -46,6 +46,17 @@
             color: #4a5568;
         }
 
+        .powered-by {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .powered-by strong {
+            color: #4a90e2;
+        }
+
         .dashboard {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -154,11 +165,10 @@
             transform: translateY(0);
         }
 
-        .btn-secondary {
-            background: #6c757d;
-            margin-left: 10px;
-            width: auto;
-            min-width: 100px;
+        .btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
         }
 
         .expense-table {
@@ -300,15 +310,39 @@
             background: #ffc107;
             color: #333;
         }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-connected {
+            background-color: #10b981;
+        }
+
+        .status-error {
+            background-color: #ef4444;
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- Header -->
         <div class="header">
             <h1>Houston 100 Expense Tracker</h1>
             <p>Kingdom-focused financial stewardship and accountability</p>
         </div>
 
+        <!-- Powered By -->
+        <div class="powered-by">
+            <span class="status-indicator status-connected"></span>
+            Powered by <strong>Airtable</strong> - Real-time data sync
+        </div>
+
+        <!-- Dashboard Stats -->
         <div class="dashboard">
             <div class="stat-card">
                 <h3 id="totalThisMonth">$0.00</h3>
@@ -328,7 +362,9 @@
             </div>
         </div>
 
+        <!-- Main Content -->
         <div class="main-content">
+            <!-- Expense Form -->
             <div class="expense-form">
                 <h2>Add New Expense</h2>
                 <form id="expenseForm">
@@ -399,9 +435,11 @@
                 </form>
             </div>
 
+            <!-- Expense List -->
             <div class="expense-list">
                 <h2>Recent Expenses</h2>
                 
+                <!-- Filters -->
                 <div class="filters">
                     <div class="filter-group">
                         <label for="filterCategory">Filter by Category</label>
@@ -417,18 +455,23 @@
                     </div>
                 </div>
 
+                <!-- Messages -->
                 <div id="messages"></div>
 
+                <!-- Expense Table -->
                 <div id="expenseTableContainer">
-                    <div class="loading">Loading expenses...</div>
+                    <div class="loading">Loading expenses from Airtable...</div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Configuration - API URL for Google Apps Script
-        const API_URL = 'https://script.googleusercontent.com/macros/echo?user_content_key=AeH5KzplWnHrTqNv-FmWdVWscNOwtenwI7dZfHKC2WHSdgg9hMFlFNfLGemqAVNjWjBjKcAWr9wZB-c7f9DeTRTjy4kzpE4oybT_QwTbuUPqzGoLh_Kqg/exec';
+        // Configuration - Airtable API
+        const AIRTABLE_BASE_ID = 'appaOZzwTAultlr23';
+        const AIRTABLE_TOKEN = 'patHd0JCviTampMds.ab1b932899944e6b78bc16d584db8cdd1b8386e362518c847808a9e6fbdc48e9';
+        const TABLE_NAME = 'Expense%20Tracking'; // URL encoded table name
+        const API_URL = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${TABLE_NAME}`;
 
         // Global variables
         let expenses = [];
@@ -467,21 +510,34 @@
 
         async function loadExpenses() {
             try {
-                showMessage('Loading expenses...', 'info');
+                showMessage('Loading expenses from Airtable...', 'info');
+                updateConnectionStatus(true);
                 
-                const response = await fetch(API_URL);
+                const response = await fetch(`${API_URL}?sort[0][field]=Date&sort[0][direction]=desc`, {
+                    headers: {
+                        'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 const data = await response.json();
                 
-                if (data.success) {
-                    expenses = data.data || [];
-                    filteredExpenses = [...expenses];
-                    renderExpenseTable();
-                    clearMessages();
-                } else {
-                    throw new Error(data.error || 'Failed to load expenses');
-                }
+                expenses = data.records.map(record => ({
+                    id: record.id,
+                    ...record.fields
+                }));
+                
+                filteredExpenses = [...expenses];
+                renderExpenseTable();
+                clearMessages();
+                updateConnectionStatus(true);
             } catch (error) {
                 showMessage('Error loading expenses: ' + error.message, 'error');
+                updateConnectionStatus(false);
                 console.error('Error loading expenses:', error);
             }
         }
@@ -495,56 +551,59 @@
             try {
                 // Disable button and show loading
                 submitBtn.disabled = true;
-                submitBtn.textContent = 'Adding...';
+                submitBtn.textContent = 'Adding to Airtable...';
                 
                 // Get form data
                 const formData = new FormData(e.target);
                 const expenseData = {
-                    date: formData.get('date'),
-                    amount: parseFloat(formData.get('amount')),
-                    category: formData.get('category'),
-                    description: formData.get('description'),
-                    paymentMethod: formData.get('paymentMethod'),
-                    memberName: formData.get('memberName'),
-                    project: formData.get('project'),
-                    notes: formData.get('notes')
+                    'Date': formData.get('date'),
+                    'Amount (USD)': parseFloat(formData.get('amount')),
+                    'Category': formData.get('category'),
+                    'Description': formData.get('description'),
+                    'Payment Method': formData.get('paymentMethod') || null,
+                    'Member Name': formData.get('memberName') || null,
+                    'Project': formData.get('project') || null,
+                    'Notes': formData.get('notes') || null
                 };
 
                 // Validate required fields
-                if (!expenseData.date || !expenseData.amount || !expenseData.category || !expenseData.description) {
+                if (!expenseData['Date'] || !expenseData['Amount (USD)'] || !expenseData['Category'] || !expenseData['Description']) {
                     throw new Error('Please fill in all required fields');
                 }
 
-                // Send to API
+                // Send to Airtable
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        action: 'create',
-                        data: expenseData
+                        fields: expenseData
                     })
                 });
 
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
+                }
+
                 const result = await response.json();
 
-                if (result.success) {
-                    showMessage('Expense added successfully!', 'success');
-                    
-                    // Reset form
-                    e.target.reset();
-                    document.getElementById('date').valueAsDate = new Date();
-                    
-                    // Reload expenses
-                    await loadExpenses();
-                    updateDashboard();
-                    populateFilters();
-                } else {
-                    throw new Error(result.error || 'Failed to add expense');
-                }
+                showMessage('Expense added successfully to Airtable!', 'success');
+                
+                // Reset form
+                e.target.reset();
+                document.getElementById('date').valueAsDate = new Date();
+                
+                // Reload expenses
+                await loadExpenses();
+                updateDashboard();
+                populateFilters();
+                updateConnectionStatus(true);
             } catch (error) {
                 showMessage('Error adding expense: ' + error.message, 'error');
+                updateConnectionStatus(false);
                 console.error('Error adding expense:', error);
             } finally {
                 // Re-enable button
@@ -583,8 +642,8 @@
             `;
 
             filteredExpenses.forEach(expense => {
-                const date = new Date(expense.Date).toLocaleDateString();
-                const amount = parseFloat(expense.Amount || 0).toFixed(2);
+                const date = expense.Date ? new Date(expense.Date).toLocaleDateString() : 'N/A';
+                const amount = parseFloat(expense['Amount (USD)'] || 0).toFixed(2);
                 const categoryClass = getCategoryClass(expense.Category);
 
                 tableHTML += `
@@ -597,8 +656,8 @@
                         <td>${expense['Member Name'] || 'N/A'}</td>
                         <td>
                             <div class="action-buttons">
-                                <button class="btn btn-edit btn-small" onclick="editExpense(${expense.id})">Edit</button>
-                                <button class="btn btn-danger btn-small" onclick="deleteExpense(${expense.id})">Delete</button>
+                                <button class="btn btn-edit btn-small" onclick="editExpense('${expense.id}')">Edit</button>
+                                <button class="btn btn-danger btn-small" onclick="deleteExpense('${expense.id}')">Delete</button>
                             </div>
                         </td>
                     </tr>
@@ -641,12 +700,13 @@
             const currentYear = new Date().getFullYear();
             
             const thisMonthExpenses = expenses.filter(expense => {
+                if (!expense.Date) return false;
                 const expenseDate = new Date(expense.Date);
                 return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
             });
 
-            const totalThisMonth = thisMonthExpenses.reduce((sum, expense) => sum + parseFloat(expense.Amount || 0), 0);
-            const totalAllTime = expenses.reduce((sum, expense) => sum + parseFloat(expense.Amount || 0), 0);
+            const totalThisMonth = thisMonthExpenses.reduce((sum, expense) => sum + parseFloat(expense['Amount (USD)'] || 0), 0);
+            const totalAllTime = expenses.reduce((sum, expense) => sum + parseFloat(expense['Amount (USD)'] || 0), 0);
             const avgExpense = expenses.length > 0 ? totalAllTime / expenses.length : 0;
 
             // Update DOM
@@ -724,37 +784,42 @@
             document.getElementById('messages').innerHTML = '';
         }
 
-        // Placeholder functions for edit/delete (we'll implement these next)
+        function updateConnectionStatus(connected) {
+            const indicator = document.querySelector('.status-indicator');
+            if (connected) {
+                indicator.className = 'status-indicator status-connected';
+            } else {
+                indicator.className = 'status-indicator status-error';
+            }
+        }
+
+        // Placeholder functions for edit/delete
         function editExpense(id) {
-            alert('Edit functionality coming soon!');
+            alert('Edit functionality coming soon! You can edit directly in Airtable for now.');
         }
 
         async function deleteExpense(id) {
             if (confirm('Are you sure you want to delete this expense?')) {
                 try {
-                    const response = await fetch(API_URL, {
-                        method: 'POST',
+                    const response = await fetch(`${API_URL}/${id}`, {
+                        method: 'DELETE',
                         headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            action: 'delete',
-                            id: id
-                        })
+                            'Authorization': `Bearer ${AIRTABLE_TOKEN}`
+                        }
                     });
 
-                    const result = await response.json();
-
-                    if (result.success) {
-                        showMessage('Expense deleted successfully!', 'success');
-                        await loadExpenses();
-                        updateDashboard();
-                        populateFilters();
-                    } else {
-                        throw new Error(result.error || 'Failed to delete expense');
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
                     }
+
+                    showMessage('Expense deleted successfully!', 'success');
+                    await loadExpenses();
+                    updateDashboard();
+                    populateFilters();
+                    updateConnectionStatus(true);
                 } catch (error) {
                     showMessage('Error deleting expense: ' + error.message, 'error');
+                    updateConnectionStatus(false);
                     console.error('Error deleting expense:', error);
                 }
             }
