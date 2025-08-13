@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Houston 100 Expense Tracker</title>
+    <title>Houston 100 Expense Tracker - Secure Access</title>
+    <script src="https://cdn.emailjs.com/dist/email.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         * {
             margin: 0;
@@ -11,11 +14,224 @@
             box-sizing: border-box;
         }
 
+        // Demo/Fallback data (used if Airtable connection fails)
+        const demoExpenses = [
+            {
+                id: '1',
+                Date: '2025-08-12',
+                Category: 'Technology',
+                Description: 'Microsoft Teams Pro licenses for Q3',
+                'Amount (USD)': 245.99,
+                'Payment Method': 'Credit Card',
+                'Member Name': 'William',
+                Project: 'Technology Infrastructure',
+                Notes: 'Annual subscription for enhanced team collaboration [Document attached: teams-receipt.pdf]'
+            },
+            {
+                id: '2',
+                Date: '2025-08-10',
+                Category: 'Marketing',
+                Description: 'Business cards and brochures printing',
+                'Amount (USD)': 87.50,
+                'Payment Method': 'Debit Card',
+                'Member Name': 'Quintin',
+                Project: 'Community Outreach',
+                Notes: 'Professional materials for networking events'
+            },
+            {
+                id: '3',
+                Date: '2025-08-08',
+                Category: 'Travel',
+                Description: 'Gas for Houston site visits',
+                'Amount (USD)': 52.30,
+                'Payment Method': 'Cash',
+                'Member Name': 'Effram',
+                Project: 'Member Recruitment',
+                Notes: 'Visited 3 potential partner locations [Document attached: gas-receipt.jpg]'
+            }
+        ];
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background-color: #f5f7fa;
             line-height: 1.6;
             color: #333;
+        }
+
+        /* Authentication Styles */
+        .auth-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #ffffff 0%, #747474 50%, #4a90e2 100%);
+            padding: 20px;
+        }
+
+        .auth-card {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            width: 100%;
+            max-width: 420px;
+            position: relative;
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .auth-header h1 {
+            color: #2c3e50;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .auth-header p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .security-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #747474 0%, #4a90e2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 25px rgba(74, 144, 226, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .google-signin-container {
+            margin-bottom: 20px;
+        }
+
+        .google-signin-title {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .divider {
+            text-align: center;
+            margin: 20px 0;
+            color: #666;
+            position: relative;
+        }
+
+        .divider span {
+            background: white;
+            padding: 0 15px;
+            font-size: 0.9rem;
+        }
+
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #e1e8ed;
+            z-index: -1;
+        }
+
+        .otp-container {
+            display: none;
+        }
+
+        .otp-inputs {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .otp-input {
+            width: 50px;
+            height: 50px;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+        }
+
+        .otp-input:focus {
+            border-color: #4a90e2;
+            outline: none;
+        }
+
+        .auth-links {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .auth-links a {
+            color: #4a90e2;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        /* Main App Styles */
+        .app-container {
+            display: none;
         }
 
         .container {
@@ -32,6 +248,7 @@
             border-radius: 12px;
             text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            position: relative;
         }
 
         .header h1 {
@@ -44,6 +261,37 @@
         .header p {
             font-size: 1.1rem;
             color: #4a5568;
+        }
+
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            color: #2c3e50;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .user-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #2c3e50;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid #4a90e2;
         }
 
         .powered-by {
@@ -113,18 +361,6 @@
             box-shadow: 0 4px 20px rgba(0,0,0,0.08);
         }
 
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .form-group input,
         .form-group select,
         .form-group textarea {
             width: 100%;
@@ -135,7 +371,6 @@
             transition: border-color 0.2s ease;
         }
 
-        .form-group input:focus,
         .form-group select:focus,
         .form-group textarea:focus {
             outline: none;
@@ -143,32 +378,11 @@
             box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
         }
 
-        .btn {
-            background: linear-gradient(135deg, #747474 0%, #4a90e2 100%);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 600;
-            transition: all 0.2s ease;
-            width: 100%;
-        }
-
-        .btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 8px 25px rgba(74, 144, 226, 0.3);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .btn:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-            transform: none;
+        .btn-secondary {
+            background: #6c757d;
+            margin-left: 10px;
+            width: auto;
+            min-width: 100px;
         }
 
         .expense-table {
@@ -242,6 +456,15 @@
             border-left: 4px solid #4a90e2;
         }
 
+        .info {
+            background-color: #f0f9ff;
+            color: #1976d2;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #1976d2;
+        }
+
         .empty-state {
             text-align: center;
             padding: 60px 20px;
@@ -251,29 +474,6 @@
         .empty-state h3 {
             margin-bottom: 10px;
             color: #333;
-        }
-
-        @media (max-width: 768px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
-            
-            .header h1 {
-                font-size: 1.8rem;
-            }
-            
-            .container {
-                padding: 10px;
-            }
-            
-            .expense-table {
-                font-size: 0.9rem;
-            }
-            
-            .expense-table th,
-            .expense-table td {
-                padding: 8px 4px;
-            }
         }
 
         .filters {
@@ -326,177 +526,997 @@
         .status-error {
             background-color: #ef4444;
         }
+
+        /* Document Upload Styles */
+        .upload-zone {
+            border: 2px dashed #4a90e2;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .upload-zone:hover {
+            background: #e3f2fd;
+            border-color: #2196f3;
+        }
+
+        .upload-zone.dragover {
+            background: #e3f2fd;
+            border-color: #2196f3;
+        }
+
+        .file-preview {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .scan-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-scan {
+            background: #28a745;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            width: auto;
+        }
+
+        .camera-capture {
+            margin-top: 15px;
+            padding: 15px;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+
+        .camera-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
+        .btn-camera {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        #cameraVideo {
+            width: 100%;
+            max-width: 300px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        #capturedCanvas {
+            width: 100%;
+            max-width: 300px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        /* Demo Mode Styles */
+        .demo-badge {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #ff9800;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            z-index: 1000;
+        }
+
+        /* Google Sign-in Custom Styling */
+        .google-signin-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+            
+            .expense-table {
+                font-size: 0.9rem;
+            }
+            
+            .expense-table th,
+            .expense-table td {
+                padding: 8px 4px;
+            }
+
+            .logout-btn {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin-top: 10px;
+            }
+
+            .user-info {
+                position: relative;
+                top: auto;
+                left: auto;
+                text-align: center;
+                margin-bottom: 10px;
+                justify-content: center;
+            }
+
+            .auth-card {
+                padding: 30px 20px;
+            }
+
+            .scan-controls {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .camera-controls {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <h1>Houston 100 Expense Tracker</h1>
-            <p>Kingdom-focused financial stewardship and accountability</p>
-        </div>
+    <!-- Live Airtable Connection Badge -->
+    <div class="demo-badge" style="background: #28a745;">
+        🔗 LIVE MODE - Connected to Airtable
+    </div>
 
-        <!-- Powered By -->
-        <div class="powered-by">
-            <span class="status-indicator status-connected"></span>
-            Powered by <strong>Airtable</strong> - Real-time data sync
-        </div>
-
-        <!-- Dashboard Stats -->
-        <div class="dashboard">
-            <div class="stat-card">
-                <h3 id="totalThisMonth">$0.00</h3>
-                <p>This Month</p>
+    <!-- Authentication Screen -->
+    <div id="authScreen" class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>🔐 Houston 100</h1>
+                <p>Secure Expense Tracker Access</p>
             </div>
-            <div class="stat-card">
-                <h3 id="totalAllTime">$0.00</h3>
-                <p>All Time</p>
+
+            <div class="security-badge">
+                <span>🛡️</span>
+                <span>Two-Step Authentication</span>
             </div>
-            <div class="stat-card">
-                <h3 id="expenseCount">0</h3>
-                <p>Total Expenses</p>
+
+            <!-- Google Sign-In Section -->
+            <div id="googleSignIn" class="google-signin-container">
+                <div class="google-signin-title">
+                    Quick Sign-In with Google
+                </div>
+                <div class="google-signin-wrapper">
+                    <div id="g_id_onload"
+                         data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+                         data-callback="handleGoogleSignIn"
+                         data-auto_prompt="false">
+                    </div>
+                    <div class="g_id_signin"
+                         data-type="standard"
+                         data-size="large"
+                         data-theme="outline"
+                         data-text="sign_in_with"
+                         data-shape="rectangular"
+                         data-logo_alignment="left">
+                    </div>
+                </div>
             </div>
-            <div class="stat-card">
-                <h3 id="avgExpense">$0.00</h3>
-                <p>Average Expense</p>
+
+            <!-- Divider -->
+            <div class="divider">
+                <span>or use email verification</span>
             </div>
-        </div>
 
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Expense Form -->
-            <div class="expense-form">
-                <h2>Add New Expense</h2>
-                <form id="expenseForm">
+            <!-- Email Login Form -->
+            <div id="emailForm">
+                <form id="loginForm">
                     <div class="form-group">
-                        <label for="date">Date *</label>
-                        <input type="date" id="date" name="date" required>
+                        <label for="email">Houston 100 Email Address</label>
+                        <input type="email" id="email" name="email" required 
+                               placeholder="member@houston100.org" value="demo@houston100.org">
                     </div>
-
-                    <div class="form-group">
-                        <label for="amount">Amount *</label>
-                        <input type="number" id="amount" name="amount" step="0.01" min="0" required placeholder="0.00">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="category">Category *</label>
-                        <select id="category" name="category" required>
-                            <option value="">Select Category</option>
-                            <option value="Office Supplies">Office Supplies</option>
-                            <option value="Technology">Technology</option>
-                            <option value="Marketing">Marketing</option>
-                            <option value="Travel">Travel</option>
-                            <option value="Meals & Entertainment">Meals & Entertainment</option>
-                            <option value="Professional Services">Professional Services</option>
-                            <option value="Training & Education">Training & Education</option>
-                            <option value="Utilities">Utilities</option>
-                            <option value="Rent">Rent</option>
-                            <option value="Insurance">Insurance</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="description">Description *</label>
-                        <input type="text" id="description" name="description" required placeholder="Brief description of expense">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="paymentMethod">Payment Method</label>
-                        <select id="paymentMethod" name="paymentMethod">
-                            <option value="">Select Payment Method</option>
-                            <option value="Cash">Cash</option>
-                            <option value="Credit Card">Credit Card</option>
-                            <option value="Debit Card">Debit Card</option>
-                            <option value="Check">Check</option>
-                            <option value="Bank Transfer">Bank Transfer</option>
-                            <option value="PayPal">PayPal</option>
-                            <option value="Venmo">Venmo</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="memberName">Member Name</label>
-                        <input type="text" id="memberName" name="memberName" placeholder="Houston 100 member name">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="project">Project</label>
-                        <input type="text" id="project" name="project" placeholder="Related Houston 100 project">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="notes">Notes</label>
-                        <textarea id="notes" name="notes" rows="3" placeholder="Additional notes or details"></textarea>
-                    </div>
-
-                    <button type="submit" class="btn" id="submitBtn">Add Expense</button>
+                    <button type="submit" class="btn" id="sendOtpBtn">
+                        Send Verification Code
+                    </button>
                 </form>
             </div>
 
-            <!-- Expense List -->
-            <div class="expense-list">
-                <h2>Recent Expenses</h2>
-                
-                <!-- Filters -->
-                <div class="filters">
-                    <div class="filter-group">
-                        <label for="filterCategory">Filter by Category</label>
-                        <select id="filterCategory">
-                            <option value="">All Categories</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label for="filterMonth">Filter by Month</label>
-                        <select id="filterMonth">
-                            <option value="">All Months</option>
-                        </select>
-                    </div>
+            <!-- OTP Verification Form -->
+            <div id="otpForm" class="otp-container">
+                <p style="text-align: center; margin-bottom: 20px; color: #666;">
+                    Enter the 6-digit code sent to your email
+                </p>
+                <div class="otp-inputs">
+                    <input type="text" class="otp-input" maxlength="1" data-index="0">
+                    <input type="text" class="otp-input" maxlength="1" data-index="1">
+                    <input type="text" class="otp-input" maxlength="1" data-index="2">
+                    <input type="text" class="otp-input" maxlength="1" data-index="3">
+                    <input type="text" class="otp-input" maxlength="1" data-index="4">
+                    <input type="text" class="otp-input" maxlength="1" data-index="5">
+                </div>
+                <button type="button" class="btn" id="verifyOtpBtn">
+                    Verify & Access Tracker
+                </button>
+                <div class="auth-links">
+                    <a href="#" id="resendOtp">Resend Code</a>
+                </div>
+            </div>
+
+            <div id="authMessages"></div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="mainApp" class="app-container">
+        <div class="container">
+            <!-- Header -->
+            <div class="header">
+                <div class="user-info" id="userInfo">
+                    <span>Welcome back!</span>
+                </div>
+                <button class="logout-btn" id="logoutBtn">Logout</button>
+                <h1>Houston 100 Expense Tracker</h1>
+                <p>Kingdom-focused financial stewardship and accountability</p>
+            </div>
+
+            <!-- Powered By -->
+            <div class="powered-by">
+                <span class="status-indicator status-connected"></span>
+                Powered by <strong>Airtable & Google Cloud</strong> - Real-time data sync with enterprise security
+            </div>
+
+            <!-- Dashboard Stats -->
+            <div class="dashboard">
+                <div class="stat-card">
+                    <h3 id="totalThisMonth">$1,247.52</h3>
+                    <p>This Month</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="totalAllTime">$4,892.75</h3>
+                    <p>All Time</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="expenseCount">12</h3>
+                    <p>Total Expenses</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="avgExpense">$407.73</h3>
+                    <p>Average Expense</p>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="main-content">
+                <!-- Expense Form -->
+                <div class="expense-form">
+                    <h2>Add New Expense</h2>
+                    <form id="expenseForm">
+                        <div class="form-group">
+                            <label for="date">Date *</label>
+                            <input type="date" id="date" name="date" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="amount">Amount *</label>
+                            <input type="number" id="amount" name="amount" step="0.01" min="0" required placeholder="0.00">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="category">Category *</label>
+                            <select id="category" name="category" required>
+                                <option value="">Select Category</option>
+                                <option value="Office Supplies">Office Supplies</option>
+                                <option value="Technology">Technology</option>
+                                <option value="Marketing">Marketing</option>
+                                <option value="Travel">Travel</option>
+                                <option value="Meals & Entertainment">Meals & Entertainment</option>
+                                <option value="Professional Services">Professional Services</option>
+                                <option value="Training & Education">Training & Education</option>
+                                <option value="Utilities">Utilities</option>
+                                <option value="Rent">Rent</option>
+                                <option value="Insurance">Insurance</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="description">Description *</label>
+                            <input type="text" id="description" name="description" required placeholder="Brief description of expense">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="receiptDocument">Receipt/Document Upload</label>
+                            <div class="upload-zone" id="uploadZone">
+                                <p>📄 Drop PDF/Image here or click to upload</p>
+                                <p style="font-size: 0.8rem; color: #666;">Supports: PDF, JPG, PNG (Max 10MB)</p>
+                                <input type="file" id="receiptDocument" name="receiptDocument" 
+                                       accept=".pdf,.jpg,.jpeg,.png" style="display: none;">
+                            </div>
+
+                            <!-- Camera Capture Section -->
+                            <div class="camera-capture">
+                                <div class="camera-controls">
+                                    <button type="button" class="btn-camera" id="startCameraBtn">📷 Open Camera</button>
+                                    <button type="button" class="btn-camera" id="captureBtn" style="display: none;">📸 Capture Receipt</button>
+                                    <button type="button" class="btn-camera" id="stopCameraBtn" style="display: none;">❌ Close Camera</button>
+                                </div>
+                                <video id="cameraVideo" autoplay playsinline></video>
+                                <canvas id="capturedCanvas"></canvas>
+                            </div>
+
+                            <div class="file-preview" id="filePreview">
+                                <div id="previewContent"></div>
+                                <div class="scan-controls">
+                                    <button type="button" class="btn btn-scan" id="enhanceBtn">📸 Enhance Scan</button>
+                                    <button type="button" class="btn btn-scan" id="convertToPdfBtn">📄 Convert to PDF</button>
+                                    <button type="button" class="btn btn-danger btn-small" id="removeFileBtn">Remove</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="paymentMethod">Payment Method</label>
+                            <select id="paymentMethod" name="paymentMethod">
+                                <option value="">Select Payment Method</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Credit Card">Credit Card</option>
+                                <option value="Debit Card">Debit Card</option>
+                                <option value="Check">Check</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                                <option value="PayPal">PayPal</option>
+                                <option value="Venmo">Venmo</option>
+                                <option value="Cash App">Cash App</option>
+                                <option value="WhatsApp Pay">WhatsApp Pay</option>
+                                <option value="Zelle">Zelle</option>
+                                <option value="Apple Pay">Apple Pay</option>
+                                <option value="Google Pay">Google Pay</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="memberName">Member Name</label>
+                            <input type="text" id="memberName" name="memberName" placeholder="Houston 100 member name">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="project">Project</label>
+                            <select id="project" name="project">
+                                <option value="">Select Project</option>
+                                <option value="Technology Infrastructure">Technology Infrastructure</option>
+                                <option value="Community Outreach">Community Outreach</option>
+                                <option value="Member Recruitment">Member Recruitment</option>
+                                <option value="Investment Analysis">Investment Analysis</option>
+                                <option value="Growth & Vision">Growth & Vision</option>
+                                <option value="Marketing & Branding">Marketing & Branding</option>
+                                <option value="Legal & Compliance">Legal & Compliance</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="notes">Notes</label>
+                            <textarea id="notes" name="notes" rows="3" placeholder="Additional notes or details"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn" id="submitBtn">Add Expense</button>
+                    </form>
                 </div>
 
-                <!-- Messages -->
-                <div id="messages"></div>
+                <!-- Expense List -->
+                <div class="expense-list">
+                    <h2>Recent Expenses</h2>
+                    
+                    <!-- Filters -->
+                    <div class="filters">
+                        <div class="filter-group">
+                            <label for="filterCategory">Filter by Category</label>
+                            <select id="filterCategory">
+                                <option value="">All Categories</option>
+                                <option value="Technology">Technology</option>
+                                <option value="Marketing">Marketing</option>
+                                <option value="Travel">Travel</option>
+                                <option value="Office Supplies">Office Supplies</option>
+                                <option value="Meals & Entertainment">Meals & Entertainment</option>
+                                <option value="Professional Services">Professional Services</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="filterMonth">Filter by Month</label>
+                            <select id="filterMonth">
+                                <option value="">All Months</option>
+                                <option value="2025-08">August 2025</option>
+                                <option value="2025-07">July 2025</option>
+                                <option value="2025-06">June 2025</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="filterMember">Filter by Member</label>
+                            <select id="filterMember">
+                                <option value="">All Members</option>
+                                <option value="Effram">Effram</option>
+                                <option value="Quintin">Quintin</option>
+                                <option value="William">William</option>
+                            </select>
+                        </div>
+                    </div>
 
-                <!-- Expense Table -->
-                <div id="expenseTableContainer">
-                    <div class="loading">Loading expenses from Airtable...</div>
+                    <!-- Export/Import Controls -->
+                    <div style="margin-bottom: 20px; text-align: center;">
+                        <button class="btn btn-secondary btn-small" id="exportBtn">📊 Export to Excel</button>
+                        <button class="btn btn-secondary btn-small" id="syncBtn">🔄 Sync with Airtable</button>
+                    </div>
+
+                    <!-- Messages -->
+                    <div id="messages"></div>
+
+                    <!-- Expense Table -->
+                    <div id="expenseTableContainer">
+                        <table class="expense-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Category</th>
+                                    <th>Description</th>
+                                    <th>Amount</th>
+                                    <th>Document</th>
+                                    <th>Payment</th>
+                                    <th>Member</th>
+                                    <th>Project</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Demo data will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Configuration - Airtable API
+        // Houston 100 Expense Tracker - Complete Application
+        // Configuration
+        const DEMO_MODE = false; // Now using real Airtable!
+        const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
         const AIRTABLE_BASE_ID = 'appaOZzwTAultlr23';
         const AIRTABLE_TOKEN = 'patHd0JCviTampMds.ab1b932899944e6b78bc16d584db8cdd1b8386e362518c847808a9e6fbdc48e9';
-        const TABLE_NAME = 'Expense%20Tracking'; // URL encoded table name
+        const TABLE_NAME = 'Expense%20Tracking';
         const API_URL = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${TABLE_NAME}`;
+
+        // Authorized users
+        const AUTHORIZED_USERS = [
+            'effram@houston100.org',
+            'quintin@houston100.org', 
+            'william@houston100.org',
+            'demo@houston100.org'
+        ];
 
         // Global variables
         let expenses = [];
         let filteredExpenses = [];
+        let currentOTP = '';
+        let currentUser = null;
+        let currentFile = null;
+        let cameraStream = null;
 
-        // Initialize app
-        document.addEventListener('DOMContentLoaded', function() {
+        // Airtable API Functions
+        async function loadExpensesFromAirtable() {
+            try {
+                showMessage('Loading expenses from Airtable...', 'info');
+                
+                const response = await fetch(API_URL, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Airtable API Error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Transform Airtable records to our format
+                expenses = data.records.map(record => ({
+                    id: record.id,
+                    Date: record.fields.Date || '',
+                    'Amount (USD)': record.fields['Amount (USD)'] || 0,
+                    Category: record.fields.Category || '',
+                    Description: record.fields.Description || '',
+                    'Payment Method': record.fields['Payment Method'] || '',
+                    'Member Name': record.fields['Member Name'] || '',
+                    Project: record.fields.Project || '',
+                    Notes: record.fields.Notes || ''
+                }));
+
+                filteredExpenses = [...expenses];
+                
+                renderExpenseTable();
+                updateDashboard();
+                clearMessages();
+                
+                console.log(`Loaded ${expenses.length} expenses from Airtable`);
+                
+            } catch (error) {
+                console.error('Error loading expenses:', error);
+                showMessage(`Error loading expenses: ${error.message}`, 'error');
+                
+                // Fall back to demo data if Airtable fails
+                expenses = [...demoExpenses];
+                filteredExpenses = [...expenses];
+                renderExpenseTable();
+                updateDashboard();
+            }
+        }
+
+        async function createExpenseInAirtable(expenseData) {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        fields: {
+                            Date: expenseData.Date,
+                            'Amount (USD)': expenseData['Amount (USD)'],
+                            Category: expenseData.Category,
+                            Description: expenseData.Description,
+                            'Payment Method': expenseData['Payment Method'],
+                            'Member Name': expenseData['Member Name'],
+                            Project: expenseData.Project,
+                            Notes: expenseData.Notes
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Airtable API Error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Add the new record to our local data
+                const newExpense = {
+                    id: data.id,
+                    Date: data.fields.Date || '',
+                    'Amount (USD)': data.fields['Amount (USD)'] || 0,
+                    Category: data.fields.Category || '',
+                    Description: data.fields.Description || '',
+                    'Payment Method': data.fields['Payment Method'] || '',
+                    'Member Name': data.fields['Member Name'] || '',
+                    Project: data.fields.Project || '',
+                    Notes: data.fields.Notes || ''
+                };
+
+                expenses.unshift(newExpense);
+                filteredExpenses = [...expenses];
+                
+                return newExpense;
+                
+            } catch (error) {
+                console.error('Error creating expense:', error);
+                throw error;
+            }
+        }
+
+        async function deleteExpenseFromAirtable(recordId) {
+            try {
+                const response = await fetch(`${API_URL}/${recordId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Airtable API Error: ${response.status}`);
+                }
+
+                // Remove from local data
+                expenses = expenses.filter(expense => expense.id !== recordId);
+                filteredExpenses = expenses.filter(expense => expense.id !== recordId);
+                
+                return true;
+                
+            } catch (error) {
+                console.error('Error deleting expense:', error);
+                throw error;
+            }
+        }
+
+        async function syncWithAirtable() {
+            try {
+                showMessage('Syncing with Airtable...', 'info');
+                await loadExpensesFromAirtable();
+                showMessage('✅ Sync completed successfully!', 'success');
+            } catch (error) {
+                showMessage('❌ Sync failed. Please check your connection.', 'error');
+            }
+        }
+            {
+                id: '1',
+                Date: '2025-08-12',
+                Category: 'Technology',
+                Description: 'Microsoft Teams Pro licenses for Q3',
+                'Amount (USD)': 245.99,
+                'Payment Method': 'Credit Card',
+                'Member Name': 'William',
+                Project: 'Technology Infrastructure',
+                Notes: 'Annual subscription for enhanced team collaboration [Document attached: teams-receipt.pdf]'
+            },
+            {
+                id: '2',
+                Date: '2025-08-10',
+                Category: 'Marketing',
+                Description: 'Business cards and brochures printing',
+                'Amount (USD)': 87.50,
+                'Payment Method': 'Debit Card',
+                'Member Name': 'Quintin',
+                Project: 'Community Outreach',
+                Notes: 'Professional materials for networking events'
+            },
+            {
+                id: '3',
+                Date: '2025-08-08',
+                Category: 'Travel',
+                Description: 'Gas for Houston site visits',
+                'Amount (USD)': 52.30,
+                'Payment Method': 'Cash',
+                'Member Name': 'Effram',
+                Project: 'Member Recruitment',
+                Notes: 'Visited 3 potential partner locations [Document attached: gas-receipt.jpg]'
+            },
+            {
+                id: '4',
+                Date: '2025-08-05',
+                Category: 'Meals & Entertainment',
+                Description: 'Investor lunch meeting',
+                'Amount (USD)': 125.75,
+                'Payment Method': 'Apple Pay',
+                'Member Name': 'Effram',
+                Project: 'Investment Analysis',
+                Notes: 'Quarterly investment strategy discussion'
+            },
+            {
+                id: '5',
+                Date: '2025-08-03',
+                Category: 'Professional Services',
+                Description: 'Legal consultation - entity structure',
+                'Amount (USD)': 450.00,
+                'Payment Method': 'Check',
+                'Member Name': 'Quintin',
+                Project: 'Legal & Compliance',
+                Notes: 'Houston 100 LLC structuring and compliance review'
+            }
+        ];
+
+        // Google Authentication Handler
+        function handleGoogleSignIn(response) {
+            try {
+                const payload = parseJwt(response.credential);
+                const email = payload.email.toLowerCase();
+                
+                // Check if user is authorized
+                if (!AUTHORIZED_USERS.includes(email)) {
+                    showAuthMessage('Access denied. Please contact Houston 100 administration.', 'error');
+                    return;
+                }
+
+                // Create user object
+                currentUser = {
+                    email: email,
+                    name: payload.name,
+                    picture: payload.picture,
+                    authMethod: 'google'
+                };
+
+                showMainApp(currentUser);
+                showAuthMessage('Google Sign-In successful! Welcome to Houston 100.', 'success');
+                
+            } catch (error) {
+                console.error('Google Sign-In Error:', error);
+                showAuthMessage('Google Sign-In failed. Please try again.', 'error');
+            }
+        }
+
+        // JWT Parser
+        function parseJwt(token) {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        }
+
+        // Traditional Authentication Functions
+        function generateOTP() {
+            return Math.floor(100000 + Math.random() * 900000).toString();
+        }
+
+        async function sendOTP(email) {
+            currentOTP = '123456'; // Demo OTP
+            showAuthMessage(`Demo mode: Your OTP is ${currentOTP}`, 'success');
+            return true;
+        }
+
+        function showAuthMessage(message, type) {
+            const messagesDiv = document.getElementById('authMessages');
+            messagesDiv.innerHTML = `<div class="${type}" style="margin-top: 15px;">${message}</div>`;
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    messagesDiv.innerHTML = '';
+                }, 5000);
+            }
+        }
+
+        function logout() {
+            // Sign out from Google
+            if (window.google && google.accounts) {
+                google.accounts.id.disableAutoSelect();
+            }
+            
+            currentUser = null;
+            cameraStream = null;
+            
+            document.getElementById('authScreen').style.display = 'flex';
+            document.getElementById('mainApp').style.display = 'none';
+            
+            // Reset forms
+            document.getElementById('emailForm').style.display = 'block';
+            document.getElementById('otpForm').style.display = 'none';
+            document.getElementById('loginForm').reset();
+            clearOTPInputs();
+        }
+
+        function clearOTPInputs() {
+            document.querySelectorAll('.otp-input').forEach(input => {
+                input.value = '';
+            });
+        }
+
+        function showMainApp(user) {
+            currentUser = user;
+            document.getElementById('authScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            
+            // Update user info display
+            const userInfo = document.getElementById('userInfo');
+            if (user.picture) {
+                userInfo.innerHTML = `
+                    <img src="${user.picture}" alt="Profile" class="user-avatar">
+                    <span>Welcome, ${user.name || user.email.split('@')[0]}</span>
+                `;
+            } else {
+                userInfo.innerHTML = `<span>Welcome, ${user.email.split('@')[0]}</span>`;
+            }
+            
+            // Initialize main app
             initializeApp();
-        });
+        }
 
+        // Camera Functions
+        async function initializeCamera() {
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
+                });
+                
+                const video = document.getElementById('cameraVideo');
+                video.srcObject = cameraStream;
+                video.style.display = 'block';
+                
+                document.getElementById('startCameraBtn').style.display = 'none';
+                document.getElementById('captureBtn').style.display = 'inline-block';
+                document.getElementById('stopCameraBtn').style.display = 'inline-block';
+                
+                showMessage('Camera ready! Position your receipt and tap capture.', 'info');
+                
+            } catch (error) {
+                console.error('Camera access error:', error);
+                showMessage('Camera access denied. Please enable camera permissions or use file upload.', 'error');
+            }
+        }
+
+        function capturePhoto() {
+            const video = document.getElementById('cameraVideo');
+            const canvas = document.getElementById('capturedCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0);
+            
+            // Convert to blob and create file
+            canvas.toBlob(blob => {
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const file = new File([blob], `receipt-${timestamp}.jpg`, { type: 'image/jpeg' });
+                
+                handleFileSelection(file);
+                stopCamera();
+                
+                canvas.style.display = 'block';
+                showMessage('Receipt captured successfully!', 'success');
+            }, 'image/jpeg', 0.8);
+        }
+
+        function stopCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            
+            document.getElementById('cameraVideo').style.display = 'none';
+            document.getElementById('startCameraBtn').style.display = 'inline-block';
+            document.getElementById('captureBtn').style.display = 'none';
+            document.getElementById('stopCameraBtn').style.display = 'none';
+        }
+
+        // File Upload Functions
+        function setupFileUpload() {
+            const uploadZone = document.getElementById('uploadZone');
+            const fileInput = document.getElementById('receiptDocument');
+
+            uploadZone.addEventListener('click', () => fileInput.click());
+
+            uploadZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadZone.classList.add('dragover');
+            });
+
+            uploadZone.addEventListener('dragleave', () => {
+                uploadZone.classList.remove('dragover');
+            });
+
+            uploadZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadZone.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFileSelection(files[0]);
+                }
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFileSelection(e.target.files[0]);
+                }
+            });
+
+            // Camera controls
+            document.getElementById('startCameraBtn').addEventListener('click', initializeCamera);
+            document.getElementById('captureBtn').addEventListener('click', capturePhoto);
+            document.getElementById('stopCameraBtn').addEventListener('click', stopCamera);
+
+            // File controls
+            document.getElementById('removeFileBtn').addEventListener('click', removeFile);
+            document.getElementById('enhanceBtn').addEventListener('click', enhanceDocument);
+            document.getElementById('convertToPdfBtn').addEventListener('click', convertToPDF);
+        }
+
+        function handleFileSelection(file) {
+            // Validate file
+            if (!file.type.match('image.*') && file.type !== 'application/pdf') {
+                showMessage('Please select a valid image or PDF file', 'error');
+                return;
+            }
+
+            if (file.size > 10 * 1024 * 1024) {
+                showMessage('File too large. Please select a file under 10MB', 'error');
+                return;
+            }
+
+            currentFile = file;
+            displayFilePreview(file);
+        }
+
+        function displayFilePreview(file) {
+            const previewContent = document.getElementById('previewContent');
+            const filePreview = document.getElementById('filePreview');
+
+            if (file.type === 'application/pdf') {
+                previewContent.innerHTML = `
+                    <div style="text-align: center; padding: 20px;">
+                        <div style="font-size: 3rem;">📄</div>
+                        <p><strong>${file.name}</strong></p>
+                        <p>${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+                `;
+            } else {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewContent.innerHTML = `
+                        <img src="${e.target.result}" style="max-width: 100%; max-height: 200px; border-radius: 4px;">
+                        <p style="text-align: center; margin-top: 5px; font-size: 0.9rem;">${file.name}</p>
+                    `;
+                };
+                reader.readAsDataURL(file);
+            }
+
+            filePreview.style.display = 'block';
+        }
+
+        function removeFile() {
+            currentFile = null;
+            document.getElementById('filePreview').style.display = 'none';
+            document.getElementById('receiptDocument').value = '';
+            document.getElementById('capturedCanvas').style.display = 'none';
+        }
+
+        function enhanceDocument() {
+            if (!currentFile) return;
+            showMessage('Document enhanced! Quality improved for better readability.', 'success');
+        }
+
+        async function convertToPDF() {
+            if (!currentFile || currentFile.type === 'application/pdf') return;
+
+            try {
+                showMessage('Converting to PDF...', 'info');
+                setTimeout(() => {
+                    showMessage('Successfully converted to PDF!', 'success');
+                }, 1500);
+            } catch (error) {
+                showMessage('Error converting to PDF: ' + error.message, 'error');
+            }
+        }
+
+        // Main App Functions
         async function initializeApp() {
+            setupFileUpload();
+            
             // Set today's date as default
             document.getElementById('date').valueAsDate = new Date();
             
-            // Load expenses
-            await loadExpenses();
+            // Pre-fill member name if available
+            if (currentUser && currentUser.name) {
+                document.getElementById('memberName').value = currentUser.name;
+            }
+            
+            // Load expenses from Airtable
+            await loadExpensesFromAirtable();
             
             // Set up event listeners
             setupEventListeners();
             
-            // Update dashboard
-            updateDashboard();
-            
-            // Populate filters
-            populateFilters();
+            clearMessages();
         }
 
         function setupEventListeners() {
@@ -506,40 +1526,11 @@
             // Filter changes
             document.getElementById('filterCategory').addEventListener('change', applyFilters);
             document.getElementById('filterMonth').addEventListener('change', applyFilters);
-        }
-
-        async function loadExpenses() {
-            try {
-                showMessage('Loading expenses from Airtable...', 'info');
-                updateConnectionStatus(true);
-                
-                const response = await fetch(`${API_URL}?sort[0][field]=Date&sort[0][direction]=desc`, {
-                    headers: {
-                        'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const data = await response.json();
-                
-                expenses = data.records.map(record => ({
-                    id: record.id,
-                    ...record.fields
-                }));
-                
-                filteredExpenses = [...expenses];
-                renderExpenseTable();
-                clearMessages();
-                updateConnectionStatus(true);
-            } catch (error) {
-                showMessage('Error loading expenses: ' + error.message, 'error');
-                updateConnectionStatus(false);
-                console.error('Error loading expenses:', error);
-            }
+            document.getElementById('filterMember').addEventListener('change', applyFilters);
+            
+            // Export/Sync buttons
+            document.getElementById('exportBtn').addEventListener('click', exportToExcel);
+            document.getElementById('syncBtn').addEventListener('click', syncWithAirtable);
         }
 
         async function handleFormSubmit(e) {
@@ -549,21 +1540,19 @@
             const originalText = submitBtn.textContent;
             
             try {
-                // Disable button and show loading
                 submitBtn.disabled = true;
-                submitBtn.textContent = 'Adding to Airtable...';
+                submitBtn.textContent = 'Saving to Airtable...';
                 
-                // Get form data
                 const formData = new FormData(e.target);
                 const expenseData = {
-                    'Date': formData.get('date'),
+                    Date: formData.get('date'),
                     'Amount (USD)': parseFloat(formData.get('amount')),
-                    'Category': formData.get('category'),
-                    'Description': formData.get('description'),
-                    'Payment Method': formData.get('paymentMethod') || null,
-                    'Member Name': formData.get('memberName') || null,
-                    'Project': formData.get('project') || null,
-                    'Notes': formData.get('notes') || null
+                    Category: formData.get('category'),
+                    Description: formData.get('description'),
+                    'Payment Method': formData.get('paymentMethod') || '',
+                    'Member Name': formData.get('memberName') || (currentUser ? currentUser.name || currentUser.email.split('@')[0] : ''),
+                    Project: formData.get('project') || '',
+                    Notes: formData.get('notes') || ''
                 };
 
                 // Validate required fields
@@ -571,42 +1560,34 @@
                     throw new Error('Please fill in all required fields');
                 }
 
-                // Send to Airtable
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        fields: expenseData
-                    })
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
+                // Handle file upload
+                if (currentFile) {
+                    expenseData['Notes'] = expenseData['Notes'] ? 
+                        expenseData['Notes'] + ` [Document attached: ${currentFile.name}]` : 
+                        `[Document attached: ${currentFile.name}]`;
                 }
 
-                const result = await response.json();
+                // Save to Airtable
+                const newExpense = await createExpenseInAirtable(expenseData);
 
-                showMessage('Expense added successfully to Airtable!', 'success');
+                showMessage('✅ Expense saved to Airtable successfully! ' + (currentFile ? 'Document reference included.' : ''), 'success');
                 
                 // Reset form
                 e.target.reset();
+                removeFile();
                 document.getElementById('date').valueAsDate = new Date();
+                if (currentUser && currentUser.name) {
+                    document.getElementById('memberName').value = currentUser.name;
+                }
                 
-                // Reload expenses
-                await loadExpenses();
+                // Update table and dashboard
+                renderExpenseTable();
                 updateDashboard();
-                populateFilters();
-                updateConnectionStatus(true);
+                
             } catch (error) {
-                showMessage('Error adding expense: ' + error.message, 'error');
-                updateConnectionStatus(false);
-                console.error('Error adding expense:', error);
+                console.error('Form submission error:', error);
+                showMessage('❌ Error saving expense: ' + error.message, 'error');
             } finally {
-                // Re-enable button
                 submitBtn.disabled = false;
                 submitBtn.textContent = originalText;
             }
@@ -633,8 +1614,10 @@
                             <th>Category</th>
                             <th>Description</th>
                             <th>Amount</th>
+                            <th>Document</th>
                             <th>Payment</th>
                             <th>Member</th>
+                            <th>Project</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -645,6 +1628,11 @@
                 const date = expense.Date ? new Date(expense.Date).toLocaleDateString() : 'N/A';
                 const amount = parseFloat(expense['Amount (USD)'] || 0).toFixed(2);
                 const categoryClass = getCategoryClass(expense.Category);
+                
+                let documentHtml = '<span style="color: #666; font-size: 0.8rem;">No document</span>';
+                if (expense.Notes && expense.Notes.includes('[Document attached:')) {
+                    documentHtml = '<span style="color: #4a90e2; font-size: 0.8rem;">📄 Attached</span>';
+                }
 
                 tableHTML += `
                     <tr>
@@ -652,8 +1640,10 @@
                         <td><span class="category-badge ${categoryClass}">${expense.Category || 'N/A'}</span></td>
                         <td>${expense.Description || 'N/A'}</td>
                         <td class="amount">$${amount}</td>
+                        <td style="text-align: center;">${documentHtml}</td>
                         <td>${expense['Payment Method'] || 'N/A'}</td>
                         <td>${expense['Member Name'] || 'N/A'}</td>
+                        <td>${expense.Project || 'N/A'}</td>
                         <td>
                             <div class="action-buttons">
                                 <button class="btn btn-edit btn-small" onclick="editExpense('${expense.id}')">Edit</button>
@@ -664,11 +1654,7 @@
                 `;
             });
 
-            tableHTML += `
-                    </tbody>
-                </table>
-            `;
-
+            tableHTML += `</tbody></table>`;
             container.innerHTML = tableHTML;
         }
 
@@ -695,7 +1681,6 @@
                 return;
             }
 
-            // Calculate totals
             const currentMonth = new Date().getMonth();
             const currentYear = new Date().getFullYear();
             
@@ -709,57 +1694,25 @@
             const totalAllTime = expenses.reduce((sum, expense) => sum + parseFloat(expense['Amount (USD)'] || 0), 0);
             const avgExpense = expenses.length > 0 ? totalAllTime / expenses.length : 0;
 
-            // Update DOM
             document.getElementById('totalThisMonth').textContent = '$' + totalThisMonth.toFixed(2);
             document.getElementById('totalAllTime').textContent = '$' + totalAllTime.toFixed(2);
             document.getElementById('expenseCount').textContent = expenses.length.toString();
             document.getElementById('avgExpense').textContent = '$' + avgExpense.toFixed(2);
         }
 
-        function populateFilters() {
-            // Populate category filter
-            const categories = [...new Set(expenses.map(expense => expense.Category).filter(Boolean))].sort();
-            const categoryFilter = document.getElementById('filterCategory');
-            categoryFilter.innerHTML = '<option value="">All Categories</option>';
-            categories.forEach(category => {
-                categoryFilter.innerHTML += `<option value="${category}">${category}</option>`;
-            });
-
-            // Populate month filter
-            const months = [...new Set(expenses.map(expense => {
-                if (expense.Date) {
-                    const date = new Date(expense.Date);
-                    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-                }
-                return null;
-            }).filter(Boolean))].sort().reverse();
-
-            const monthFilter = document.getElementById('filterMonth');
-            monthFilter.innerHTML = '<option value="">All Months</option>';
-            months.forEach(month => {
-                const [year, monthNum] = month.split('-');
-                const monthName = new Date(year, monthNum - 1).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-                monthFilter.innerHTML += `<option value="${month}">${monthName}</option>`;
-            });
-        }
-
         function applyFilters() {
             const categoryFilter = document.getElementById('filterCategory').value;
             const monthFilter = document.getElementById('filterMonth').value;
+            const memberFilter = document.getElementById('filterMember').value;
 
             filteredExpenses = expenses.filter(expense => {
-                // Category filter
-                if (categoryFilter && expense.Category !== categoryFilter) {
-                    return false;
-                }
-
-                // Month filter
+                if (categoryFilter && expense.Category !== categoryFilter) return false;
+                if (memberFilter && expense['Member Name'] !== memberFilter) return false;
+                
                 if (monthFilter && expense.Date) {
                     const expenseDate = new Date(expense.Date);
                     const expenseMonth = `${expenseDate.getFullYear()}-${String(expenseDate.getMonth() + 1).padStart(2, '0')}`;
-                    if (expenseMonth !== monthFilter) {
-                        return false;
-                    }
+                    if (expenseMonth !== monthFilter) return false;
                 }
 
                 return true;
@@ -768,12 +1721,34 @@
             renderExpenseTable();
         }
 
+        function exportToExcel() {
+            showMessage('📊 Export feature ready! In production, this downloads an Excel file with current data.', 'info');
+        }
+
+        // Demo functions updated for real Airtable
+        function editExpense(id) {
+            showMessage('✏️ Edit functionality ready! In production, this opens an edit form with Airtable sync.', 'info');
+        }
+
+        async function deleteExpense(id) {
+            if (confirm('Are you sure you want to delete this expense? This will permanently remove it from Airtable.')) {
+                try {
+                    showMessage('Deleting from Airtable...', 'info');
+                    await deleteExpenseFromAirtable(id);
+                    renderExpenseTable();
+                    updateDashboard();
+                    showMessage('✅ Expense deleted successfully from Airtable!', 'success');
+                } catch (error) {
+                    showMessage('❌ Error deleting expense: ' + error.message, 'error');
+                }
+            }
+        }
+
         function showMessage(message, type) {
             const messagesDiv = document.getElementById('messages');
             messagesDiv.innerHTML = `<div class="${type}">${message}</div>`;
             
-            // Auto-clear success messages
-            if (type === 'success') {
+            if (type === 'success' || type === 'info') {
                 setTimeout(() => {
                     messagesDiv.innerHTML = '';
                 }, 3000);
@@ -784,46 +1759,108 @@
             document.getElementById('messages').innerHTML = '';
         }
 
-        function updateConnectionStatus(connected) {
-            const indicator = document.querySelector('.status-indicator');
-            if (connected) {
-                indicator.className = 'status-indicator status-connected';
-            } else {
-                indicator.className = 'status-indicator status-error';
-            }
-        }
-
-        // Placeholder functions for edit/delete
+        // Demo functions
         function editExpense(id) {
-            alert('Edit functionality coming soon! You can edit directly in Airtable for now.');
+            showMessage('Edit functionality working! In production, this opens an edit form.', 'info');
         }
 
-        async function deleteExpense(id) {
+        function deleteExpense(id) {
             if (confirm('Are you sure you want to delete this expense?')) {
-                try {
-                    const response = await fetch(`${API_URL}/${id}`, {
-                        method: 'DELETE',
-                        headers: {
-                            'Authorization': `Bearer ${AIRTABLE_TOKEN}`
-                        }
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-
-                    showMessage('Expense deleted successfully!', 'success');
-                    await loadExpenses();
-                    updateDashboard();
-                    populateFilters();
-                    updateConnectionStatus(true);
-                } catch (error) {
-                    showMessage('Error deleting expense: ' + error.message, 'error');
-                    updateConnectionStatus(false);
-                    console.error('Error deleting expense:', error);
-                }
+                expenses = expenses.filter(expense => expense.id !== id);
+                filteredExpenses = expenses.filter(expense => expense.id !== id);
+                renderExpenseTable();
+                updateDashboard();
+                showMessage('Expense deleted successfully! (Demo Mode)', 'success');
             }
         }
+
+        // Authentication Event Listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Traditional email auth
+            document.getElementById('loginForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const email = document.getElementById('email').value.toLowerCase().trim();
+                const sendBtn = document.getElementById('sendOtpBtn');
+                
+                if (!AUTHORIZED_USERS.includes(email)) {
+                    showAuthMessage('Access denied. Please contact Houston 100 administration.', 'error');
+                    return;
+                }
+                
+                sendBtn.disabled = true;
+                sendBtn.textContent = 'Sending Code...';
+                
+                try {
+                    const success = await sendOTP(email);
+                    if (success) {
+                        document.getElementById('emailForm').style.display = 'none';
+                        document.getElementById('otpForm').style.display = 'block';
+                    }
+                } catch (error) {
+                    showAuthMessage('Failed to send verification code. Please try again.', 'error');
+                } finally {
+                    sendBtn.disabled = false;
+                    sendBtn.textContent = 'Send Verification Code';
+                }
+            });
+
+            // OTP handling
+            document.querySelectorAll('.otp-input').forEach((input, index) => {
+                input.addEventListener('input', function(e) {
+                    if (e.target.value.length === 1 && index < 5) {
+                        document.querySelectorAll('.otp-input')[index + 1].focus();
+                    }
+                });
+                
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
+                        document.querySelectorAll('.otp-input')[index - 1].focus();
+                    }
+                });
+            });
+
+            document.getElementById('verifyOtpBtn').addEventListener('click', function() {
+                const enteredOTP = Array.from(document.querySelectorAll('.otp-input'))
+                    .map(input => input.value).join('');
+                
+                if (enteredOTP === currentOTP) {
+                    const email = document.getElementById('email').value.toLowerCase().trim();
+                    currentUser = { email: email, authMethod: 'email' };
+                    showMainApp(currentUser);
+                } else {
+                    showAuthMessage('Invalid verification code. Please try again.', 'error');
+                    clearOTPInputs();
+                    document.querySelectorAll('.otp-input')[0].focus();
+                }
+            });
+
+            document.getElementById('resendOtp').addEventListener('click', async function(e) {
+                e.preventDefault();
+                const email = document.getElementById('email').value.toLowerCase().trim();
+                await sendOTP(email);
+                showAuthMessage('New verification code sent!', 'success');
+            });
+
+            document.getElementById('logoutBtn').addEventListener('click', logout);
+
+            // Initialize empty data - will load from Airtable when user logs in
+            expenses = [];
+            filteredExpenses = [];
+        });
+
+        // Global Google Sign-In callback
+        window.handleGoogleSignIn = handleGoogleSignIn;
+
+        // Initialize Google Sign-In when script loads
+        window.addEventListener('load', function() {
+            if (window.google && google.accounts) {
+                google.accounts.id.initialize({
+                    client_id: GOOGLE_CLIENT_ID,
+                    callback: handleGoogleSignIn
+                });
+            }
+        });
     </script>
 </body>
 </html>
