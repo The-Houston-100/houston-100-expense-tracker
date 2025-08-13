@@ -6,7 +6,6 @@
     <title>Houston 100 Expense Tracker - Secure Access</title>
     <script src="https://cdn.emailjs.com/dist/email.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         * {
             margin: 0;
@@ -285,13 +284,6 @@
             display: flex;
             align-items: center;
             gap: 8px;
-        }
-
-        .user-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            border: 2px solid #4a90e2;
         }
 
         .powered-by {
@@ -704,33 +696,6 @@
                 <span>Two-Step Authentication</span>
             </div>
 
-            <!-- Google Sign-In Section -->
-            <div id="googleSignIn" class="google-signin-container">
-                <div class="google-signin-title">
-                    Quick Sign-In with Google
-                </div>
-                <div class="google-signin-wrapper">
-                    <div id="g_id_onload"
-                         data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
-                         data-callback="handleGoogleSignIn"
-                         data-auto_prompt="false">
-                    </div>
-                    <div class="g_id_signin"
-                         data-type="standard"
-                         data-size="large"
-                         data-theme="outline"
-                         data-text="sign_in_with"
-                         data-shape="rectangular"
-                         data-logo_alignment="left">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Divider -->
-            <div class="divider">
-                <span>or use email verification</span>
-            </div>
-
             <!-- Email Login Form -->
             <div id="emailForm">
                 <form id="loginForm">
@@ -786,7 +751,7 @@
             <!-- Powered By -->
             <div class="powered-by">
                 <span class="status-indicator status-connected"></span>
-                Powered by <strong>Airtable & Google Cloud</strong> - Real-time data sync with enterprise security
+                Powered by <strong>Airtable</strong> - Real-time data sync with enterprise security
             </div>
 
             <!-- Dashboard Stats -->
@@ -1004,7 +969,7 @@
         // Houston 100 Expense Tracker - Complete Application
         // Configuration
         const DEMO_MODE = false; // Now using real Airtable!
-        const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+        const GOOGLE_CLIENT_ID = '123456789-abcdefghijk.apps.googleusercontent.com'; // Replace with your actual Client ID
         const AIRTABLE_BASE_ID = 'appaOZzwTAultlr23';
         const AIRTABLE_TOKEN = 'patHd0JCviTampMds.ab1b932899944e6b78bc16d584db8cdd1b8386e362518c847808a9e6fbdc48e9';
         const TABLE_NAME = 'Expense%20Tracking';
@@ -1222,45 +1187,6 @@
             }
         ];
 
-        // Google Authentication Handler
-        function handleGoogleSignIn(response) {
-            try {
-                const payload = parseJwt(response.credential);
-                const email = payload.email.toLowerCase();
-                
-                // Check if user is authorized
-                if (!AUTHORIZED_USERS.includes(email)) {
-                    showAuthMessage('Access denied. Please contact Houston 100 administration.', 'error');
-                    return;
-                }
-
-                // Create user object
-                currentUser = {
-                    email: email,
-                    name: payload.name,
-                    picture: payload.picture,
-                    authMethod: 'google'
-                };
-
-                showMainApp(currentUser);
-                showAuthMessage('Google Sign-In successful! Welcome to Houston 100.', 'success');
-                
-            } catch (error) {
-                console.error('Google Sign-In Error:', error);
-                showAuthMessage('Google Sign-In failed. Please try again.', 'error');
-            }
-        }
-
-        // JWT Parser
-        function parseJwt(token) {
-            const base64Url = token.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
-            return JSON.parse(jsonPayload);
-        }
-
         // Traditional Authentication Functions
         function generateOTP() {
             return Math.floor(100000 + Math.random() * 900000).toString();
@@ -1284,11 +1210,6 @@
         }
 
         function logout() {
-            // Sign out from Google
-            if (window.google && google.accounts) {
-                google.accounts.id.disableAutoSelect();
-            }
-            
             currentUser = null;
             cameraStream = null;
             
@@ -1315,14 +1236,7 @@
             
             // Update user info display
             const userInfo = document.getElementById('userInfo');
-            if (user.picture) {
-                userInfo.innerHTML = `
-                    <img src="${user.picture}" alt="Profile" class="user-avatar">
-                    <span>Welcome, ${user.name || user.email.split('@')[0]}</span>
-                `;
-            } else {
-                userInfo.innerHTML = `<span>Welcome, ${user.email.split('@')[0]}</span>`;
-            }
+            userInfo.innerHTML = `<span>Welcome, ${user.email.split('@')[0]}</span>`;
             
             // Initialize main app
             initializeApp();
@@ -1506,8 +1420,8 @@
             document.getElementById('date').valueAsDate = new Date();
             
             // Pre-fill member name if available
-            if (currentUser && currentUser.name) {
-                document.getElementById('memberName').value = currentUser.name;
+            if (currentUser && currentUser.email) {
+                document.getElementById('memberName').value = currentUser.email.split('@')[0];
             }
             
             // Load expenses from Airtable
@@ -1550,7 +1464,7 @@
                     Category: formData.get('category'),
                     Description: formData.get('description'),
                     'Payment Method': formData.get('paymentMethod') || '',
-                    'Member Name': formData.get('memberName') || (currentUser ? currentUser.name || currentUser.email.split('@')[0] : ''),
+                    'Member Name': formData.get('memberName') || (currentUser ? currentUser.email.split('@')[0] : ''),
                     Project: formData.get('project') || '',
                     Notes: formData.get('notes') || ''
                 };
@@ -1576,8 +1490,8 @@
                 e.target.reset();
                 removeFile();
                 document.getElementById('date').valueAsDate = new Date();
-                if (currentUser && currentUser.name) {
-                    document.getElementById('memberName').value = currentUser.name;
+                if (currentUser && currentUser.email) {
+                    document.getElementById('memberName').value = currentUser.email.split('@')[0];
                 }
                 
                 // Update table and dashboard
@@ -1826,7 +1740,7 @@
                 
                 if (enteredOTP === currentOTP) {
                     const email = document.getElementById('email').value.toLowerCase().trim();
-                    currentUser = { email: email, authMethod: 'email' };
+                    currentUser = { email: email };
                     showMainApp(currentUser);
                 } else {
                     showAuthMessage('Invalid verification code. Please try again.', 'error');
@@ -1847,19 +1761,6 @@
             // Initialize empty data - will load from Airtable when user logs in
             expenses = [];
             filteredExpenses = [];
-        });
-
-        // Global Google Sign-In callback
-        window.handleGoogleSignIn = handleGoogleSignIn;
-
-        // Initialize Google Sign-In when script loads
-        window.addEventListener('load', function() {
-            if (window.google && google.accounts) {
-                google.accounts.id.initialize({
-                    client_id: GOOGLE_CLIENT_ID,
-                    callback: handleGoogleSignIn
-                });
-            }
         });
     </script>
 </body>
