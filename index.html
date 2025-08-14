@@ -13,43 +13,6 @@
             box-sizing: border-box;
         }
 
-        // Demo/Fallback data (used if Airtable connection fails)
-        const demoExpenses = [
-            {
-                id: '1',
-                Date: '2025-08-12',
-                Category: 'Technology',
-                Description: 'Microsoft Teams Pro licenses for Q3',
-                'Amount (USD)': 245.99,
-                'Payment Method': 'Credit Card',
-                'Member Name': 'William',
-                Project: 'Technology Infrastructure',
-                Notes: 'Annual subscription for enhanced team collaboration [Document attached: teams-receipt.pdf]'
-            },
-            {
-                id: '2',
-                Date: '2025-08-10',
-                Category: 'Marketing',
-                Description: 'Business cards and brochures printing',
-                'Amount (USD)': 87.50,
-                'Payment Method': 'Debit Card',
-                'Member Name': 'Quintin',
-                Project: 'Community Outreach',
-                Notes: 'Professional materials for networking events'
-            },
-            {
-                id: '3',
-                Date: '2025-08-08',
-                Category: 'Travel',
-                Description: 'Gas for Houston site visits',
-                'Amount (USD)': 52.30,
-                'Payment Method': 'Cash',
-                'Member Name': 'Effram',
-                Project: 'Member Recruitment',
-                Notes: 'Visited 3 potential partner locations [Document attached: gas-receipt.jpg]'
-            }
-        ];
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background-color: #f5f7fa;
@@ -154,41 +117,6 @@
             opacity: 0.7;
             cursor: not-allowed;
             transform: none;
-        }
-
-        .google-signin-container {
-            margin-bottom: 20px;
-        }
-
-        .google-signin-title {
-            text-align: center;
-            margin-bottom: 15px;
-            color: #666;
-            font-size: 0.9rem;
-        }
-
-        .divider {
-            text-align: center;
-            margin: 20px 0;
-            color: #666;
-            position: relative;
-        }
-
-        .divider span {
-            background: white;
-            padding: 0 15px;
-            font-size: 0.9rem;
-        }
-
-        .divider::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: #e1e8ed;
-            z-index: -1;
         }
 
         .otp-container {
@@ -607,19 +535,12 @@
             position: fixed;
             top: 10px;
             right: 10px;
-            background: #ff9800;
+            background: #28a745;
             color: white;
             padding: 8px 16px;
             border-radius: 20px;
             font-size: 0.8rem;
             z-index: 1000;
-        }
-
-        /* Google Sign-in Custom Styling */
-        .google-signin-wrapper {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
         }
 
         /* Responsive Design */
@@ -679,8 +600,8 @@
 </head>
 <body>
     <!-- Live Airtable Connection Badge -->
-    <div class="demo-badge" style="background: #28a745;">
-        🔗 LIVE MODE - Airtable + Email Auth
+    <div class="demo-badge">
+        🔗 LIVE MODE - Connected to Airtable
     </div>
 
     <!-- Authentication Screen -->
@@ -968,8 +889,6 @@
     <script>
         // Houston 100 Expense Tracker - Complete Application
         // Configuration
-        const DEMO_MODE = false; // Now using real Airtable!
-        const GOOGLE_CLIENT_ID = '123456789-abcdefghijk.apps.googleusercontent.com'; // Replace with your actual Client ID
         const AIRTABLE_BASE_ID = 'appaOZzwTAultlr23';
         const AIRTABLE_TOKEN = 'patHd0JCviTampMds.ab1b932899944e6b78bc16d584db8cdd1b8386e362518c847808a9e6fbdc48e9';
         const TABLE_NAME = 'Expense%20Tracking';
@@ -991,6 +910,65 @@
         let currentUser = null;
         let currentFile = null;
         let cameraStream = null;
+
+        // Demo/Fallback data (used if Airtable connection fails)
+        const demoExpenses = [
+            {
+                id: '1',
+                Date: '2025-08-12',
+                Category: 'Technology',
+                Description: 'Microsoft Teams Pro licenses for Q3',
+                'Amount (USD)': 245.99,
+                'Payment Method': 'Credit Card',
+                'Member Name': 'William',
+                Project: 'Technology Infrastructure',
+                Notes: 'Annual subscription for enhanced team collaboration [Document attached: teams-receipt.pdf]'
+            },
+            {
+                id: '2',
+                Date: '2025-08-10',
+                Category: 'Marketing',
+                Description: 'Business cards and brochures printing',
+                'Amount (USD)': 87.50,
+                'Payment Method': 'Debit Card',
+                'Member Name': 'Quintin',
+                Project: 'Community Outreach',
+                Notes: 'Professional materials for networking events'
+            },
+            {
+                id: '3',
+                Date: '2025-08-08',
+                Category: 'Travel',
+                Description: 'Gas for Houston site visits',
+                'Amount (USD)': 52.30,
+                'Payment Method': 'Cash',
+                'Member Name': 'Effram',
+                Project: 'Member Recruitment',
+                Notes: 'Visited 3 potential partner locations [Document attached: gas-receipt.jpg]'
+            },
+            {
+                id: '4',
+                Date: '2025-08-05',
+                Category: 'Meals & Entertainment',
+                Description: 'Investor lunch meeting',
+                'Amount (USD)': 125.75,
+                'Payment Method': 'Apple Pay',
+                'Member Name': 'Effram',
+                Project: 'Investment Analysis',
+                Notes: 'Quarterly investment strategy discussion'
+            },
+            {
+                id: '5',
+                Date: '2025-08-03',
+                Category: 'Professional Services',
+                Description: 'Legal consultation - entity structure',
+                'Amount (USD)': 450.00,
+                'Payment Method': 'Check',
+                'Member Name': 'Quintin',
+                Project: 'Legal & Compliance',
+                Notes: 'Houston 100 LLC structuring and compliance review'
+            }
+        ];
 
         // Airtable API Functions
         async function loadExpensesFromAirtable() {
@@ -1131,70 +1109,8 @@
                 showMessage('❌ Sync failed. Please check your connection.', 'error');
             }
         }
-            {
-                id: '1',
-                Date: '2025-08-12',
-                Category: 'Technology',
-                Description: 'Microsoft Teams Pro licenses for Q3',
-                'Amount (USD)': 245.99,
-                'Payment Method': 'Credit Card',
-                'Member Name': 'William',
-                Project: 'Technology Infrastructure',
-                Notes: 'Annual subscription for enhanced team collaboration [Document attached: teams-receipt.pdf]'
-            },
-            {
-                id: '2',
-                Date: '2025-08-10',
-                Category: 'Marketing',
-                Description: 'Business cards and brochures printing',
-                'Amount (USD)': 87.50,
-                'Payment Method': 'Debit Card',
-                'Member Name': 'Quintin',
-                Project: 'Community Outreach',
-                Notes: 'Professional materials for networking events'
-            },
-            {
-                id: '3',
-                Date: '2025-08-08',
-                Category: 'Travel',
-                Description: 'Gas for Houston site visits',
-                'Amount (USD)': 52.30,
-                'Payment Method': 'Cash',
-                'Member Name': 'Effram',
-                Project: 'Member Recruitment',
-                Notes: 'Visited 3 potential partner locations [Document attached: gas-receipt.jpg]'
-            },
-            {
-                id: '4',
-                Date: '2025-08-05',
-                Category: 'Meals & Entertainment',
-                Description: 'Investor lunch meeting',
-                'Amount (USD)': 125.75,
-                'Payment Method': 'Apple Pay',
-                'Member Name': 'Effram',
-                Project: 'Investment Analysis',
-                Notes: 'Quarterly investment strategy discussion'
-            },
-            {
-                id: '5',
-                Date: '2025-08-03',
-                Category: 'Professional Services',
-                Description: 'Legal consultation - entity structure',
-                'Amount (USD)': 450.00,
-                'Payment Method': 'Check',
-                'Member Name': 'Quintin',
-                Project: 'Legal & Compliance',
-                Notes: 'Houston 100 LLC structuring and compliance review'
-            }
-        ];
 
-        // Authentication Configuration
-        const EMAIL_SERVICE = 'demo'; // Options: 'demo', 'emailjs', 'backend'
-        const EMAILJS_SERVICE_ID = 'YOUR_EMAILJS_SERVICE_ID';
-        const EMAILJS_TEMPLATE_ID = 'YOUR_EMAILJS_TEMPLATE_ID';
-        const EMAILJS_PUBLIC_KEY = 'YOUR_EMAILJS_PUBLIC_KEY';
-
-        // Traditional Authentication Functions
+        // Authentication Functions
         function generateOTP() {
             return Math.floor(100000 + Math.random() * 900000).toString();
         }
@@ -1680,21 +1596,6 @@
 
         function clearMessages() {
             document.getElementById('messages').innerHTML = '';
-        }
-
-        // Demo functions
-        function editExpense(id) {
-            showMessage('Edit functionality working! In production, this opens an edit form.', 'info');
-        }
-
-        function deleteExpense(id) {
-            if (confirm('Are you sure you want to delete this expense?')) {
-                expenses = expenses.filter(expense => expense.id !== id);
-                filteredExpenses = expenses.filter(expense => expense.id !== id);
-                renderExpenseTable();
-                updateDashboard();
-                showMessage('Expense deleted successfully! (Demo Mode)', 'success');
-            }
         }
 
         // Authentication Event Listeners
