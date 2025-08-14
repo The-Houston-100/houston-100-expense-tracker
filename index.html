@@ -448,26 +448,6 @@
         }
 
         /* Document Upload Styles */
-        .upload-zone {
-            border: 2px dashed #4a90e2;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-            background: #f8f9fa;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .upload-zone:hover {
-            background: #e3f2fd;
-            border-color: #2196f3;
-        }
-
-        .upload-zone.dragover {
-            background: #e3f2fd;
-            border-color: #2196f3;
-        }
-
         .file-preview {
             margin-top: 10px;
             padding: 10px;
@@ -735,13 +715,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="receiptDocument">Receipt/Document Upload</label>
-                            <div class="upload-zone" id="uploadZone">
-                                <p>📄 Drop PDF/Image here or click to upload</p>
-                                <p style="font-size: 0.8rem; color: #666;">Supports: PDF, JPG, PNG (Max 10MB)</p>
-                                <input type="file" id="receiptDocument" name="receiptDocument" 
-                                       accept=".pdf,.jpg,.jpeg,.png" style="display: none;">
-                            </div>
+                            <label for="receiptDocument">Receipt Capture</label>
 
                             <!-- Camera Capture Section -->
                             <div class="camera-capture">
@@ -1228,37 +1202,8 @@
             document.getElementById('stopCameraBtn').style.display = 'none';
         }
 
-        // File Upload Functions
+        // Camera Capture Functions
         function setupFileUpload() {
-            const uploadZone = document.getElementById('uploadZone');
-            const fileInput = document.getElementById('receiptDocument');
-
-            uploadZone.addEventListener('click', () => fileInput.click());
-
-            uploadZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadZone.classList.add('dragover');
-            });
-
-            uploadZone.addEventListener('dragleave', () => {
-                uploadZone.classList.remove('dragover');
-            });
-
-            uploadZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadZone.classList.remove('dragover');
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    handleFileSelection(files[0]);
-                }
-            });
-
-            fileInput.addEventListener('change', (e) => {
-                if (e.target.files.length > 0) {
-                    handleFileSelection(e.target.files[0]);
-                }
-            });
-
             // Camera controls
             document.getElementById('startCameraBtn').addEventListener('click', initializeCamera);
             document.getElementById('captureBtn').addEventListener('click', capturePhoto);
@@ -1271,17 +1216,7 @@
         }
 
         function handleFileSelection(file) {
-            // Validate file
-            if (!file.type.match('image.*') && file.type !== 'application/pdf') {
-                showMessage('Please select a valid image or PDF file', 'error');
-                return;
-            }
-
-            if (file.size > 10 * 1024 * 1024) {
-                showMessage('File too large. Please select a file under 10MB', 'error');
-                return;
-            }
-
+            // Camera captures are always valid image files
             currentFile = file;
             displayFilePreview(file);
         }
@@ -1290,24 +1225,15 @@
             const previewContent = document.getElementById('previewContent');
             const filePreview = document.getElementById('filePreview');
 
-            if (file.type === 'application/pdf') {
+            // Display camera captured image
+            const reader = new FileReader();
+            reader.onload = (e) => {
                 previewContent.innerHTML = `
-                    <div style="text-align: center; padding: 20px;">
-                        <div style="font-size: 3rem;">📄</div>
-                        <p><strong>${file.name}</strong></p>
-                        <p>${(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                    </div>
+                    <img src="${e.target.result}" style="max-width: 100%; max-height: 200px; border-radius: 4px;">
+                    <p style="text-align: center; margin-top: 5px; font-size: 0.9rem;">${file.name}</p>
                 `;
-            } else {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    previewContent.innerHTML = `
-                        <img src="${e.target.result}" style="max-width: 100%; max-height: 200px; border-radius: 4px;">
-                        <p style="text-align: center; margin-top: 5px; font-size: 0.9rem;">${file.name}</p>
-                    `;
-                };
-                reader.readAsDataURL(file);
-            }
+            };
+            reader.readAsDataURL(file);
 
             filePreview.style.display = 'block';
         }
@@ -1315,7 +1241,6 @@
         function removeFile() {
             currentFile = null;
             document.getElementById('filePreview').style.display = 'none';
-            document.getElementById('receiptDocument').value = '';
             document.getElementById('capturedCanvas').style.display = 'none';
         }
 
@@ -1325,7 +1250,7 @@
         }
 
         async function convertToPDF() {
-            if (!currentFile || currentFile.type === 'application/pdf') return;
+            if (!currentFile) return;
 
             try {
                 showMessage('Converting to PDF...', 'info');
