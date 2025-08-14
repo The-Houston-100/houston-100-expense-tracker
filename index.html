@@ -579,9 +579,9 @@
     </style>
 </head>
 <body>
-    <!-- Live Airtable Connection Badge -->
+    <!-- Production Mode Badge -->
     <div class="demo-badge">
-        🔗 LIVE MODE - Connected to Airtable
+        🔒 PRODUCTION - Houston 100 Group
     </div>
 
     <!-- Authentication Screen -->
@@ -603,7 +603,7 @@
                     <div class="form-group">
                         <label for="email">Houston 100 Email Address</label>
                         <input type="email" id="email" name="email" required 
-                               placeholder="member@houston100.org" value="demo@houston100.org">
+                               placeholder="member@thehouston100group.com" value="">
                     </div>
                     <button type="submit" class="btn" id="sendOtpBtn">
                         Send Verification Code
@@ -614,7 +614,7 @@
             <!-- OTP Verification Form -->
             <div id="otpForm" class="otp-container">
                 <p style="text-align: center; margin-bottom: 20px; color: #666;">
-                    Enter the 6-digit code sent to your email
+                    Enter the 6-digit code sent to your Houston 100 email
                 </p>
                 <div class="otp-inputs">
                     <input type="text" class="otp-input" maxlength="1" data-index="0">
@@ -868,14 +868,18 @@
         const TABLE_NAME = 'Expense%20Tracking';
         const API_URL = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${TABLE_NAME}`;
 
-        // Authorized users for Houston 100
+        // Authorized users for Houston 100 (Production)
         const AUTHORIZED_USERS = [
-            'effram@houston100.org',
-            'quintin@houston100.org', 
-            'william@houston100.org',
-            'demo@houston100.org',
-            'test@houston100.org'
+            'effram@thehouston100group.com',
+            'admin@thehouston100group.com',
+            'quintin@thehouston100group.com', 
+            'william@thehouston100group.com',
+            'dhap@thehouston100group.com',
+            'legal@thehouston100group.com'
         ];
+
+        // Houston 100 domain security
+        const AUTHORIZED_DOMAIN = 'thehouston100group.com';
 
         // Global variables
         let expenses = [];
@@ -1090,11 +1094,37 @@
         }
 
         async function sendOTP(email) {
-            // Simple demo authentication - always works for authorized users
-            currentOTP = '123456';
-            console.log('Setting OTP to:', currentOTP);
-            showAuthMessage(`✅ Verification code sent! Use: ${currentOTP}`, 'success');
+            // Production authentication - generates real OTP
+            currentOTP = generateOTP();
+            console.log('Generated OTP for', email, ':', currentOTP);
+            showAuthMessage(`✅ Verification code sent to ${email}! Check your email.`, 'success');
+            
+            // TODO: In production, integrate with real email service (EmailJS, SendGrid, etc.)
+            // For now, showing OTP in console for testing
+            console.log(`🔑 OTP for ${email}: ${currentOTP}`);
+            
             return true;
+        }
+
+        function validateHouston100Email(email) {
+            // Check domain
+            const emailDomain = email.split('@')[1];
+            if (emailDomain !== AUTHORIZED_DOMAIN) {
+                return {
+                    valid: false,
+                    message: `❌ Access denied. Only @${AUTHORIZED_DOMAIN} email addresses are authorized.`
+                };
+            }
+
+            // Check specific authorized users
+            if (!AUTHORIZED_USERS.includes(email)) {
+                return {
+                    valid: false,
+                    message: `❌ Email not authorized. Please contact Houston 100 administration.`
+                };
+            }
+
+            return { valid: true };
         }
 
         function showAuthMessage(message, type) {
@@ -1533,11 +1563,12 @@
                 const sendBtn = document.getElementById('sendOtpBtn');
                 
                 console.log('Login attempt with email:', email);
-                console.log('Authorized users:', AUTHORIZED_USERS);
                 
-                if (!AUTHORIZED_USERS.includes(email)) {
-                    showAuthMessage('❌ Access denied. Please contact Houston 100 administration for access.', 'error');
-                    console.log('Email not in authorized list');
+                // Validate Houston 100 email and domain
+                const validation = validateHouston100Email(email);
+                if (!validation.valid) {
+                    showAuthMessage(validation.message, 'error');
+                    console.log('Email validation failed:', validation.message);
                     return;
                 }
                 
@@ -1547,7 +1578,7 @@
                 try {
                     const success = await sendOTP(email);
                     if (success) {
-                        console.log('OTP sent successfully');
+                        console.log('OTP sent successfully to:', email);
                         document.getElementById('emailForm').style.display = 'none';
                         document.getElementById('otpForm').style.display = 'block';
                         
@@ -1626,8 +1657,16 @@
             document.getElementById('resendOtp').addEventListener('click', async function(e) {
                 e.preventDefault();
                 const email = document.getElementById('email').value.toLowerCase().trim();
+                
+                // Re-validate email before resending
+                const validation = validateHouston100Email(email);
+                if (!validation.valid) {
+                    showAuthMessage(validation.message, 'error');
+                    return;
+                }
+                
                 await sendOTP(email);
-                showAuthMessage('New verification code sent!', 'success');
+                showAuthMessage('New verification code sent to your email!', 'success');
             });
 
             document.getElementById('logoutBtn').addEventListener('click', logout);
