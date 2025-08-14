@@ -975,12 +975,13 @@
         const TABLE_NAME = 'Expense%20Tracking';
         const API_URL = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${TABLE_NAME}`;
 
-        // Authorized users
+        // Authorized users for Houston 100
         const AUTHORIZED_USERS = [
             'effram@houston100.org',
             'quintin@houston100.org', 
             'william@houston100.org',
-            'demo@houston100.org'
+            'demo@houston100.org',
+            'test@houston100.org'
         ];
 
         // Global variables
@@ -1199,49 +1200,11 @@
         }
 
         async function sendOTP(email) {
-            try {
-                if (EMAIL_SERVICE === 'demo') {
-                    // Demo mode - always works
-                    currentOTP = '123456';
-                    showAuthMessage(`✅ Demo mode: Your OTP is ${currentOTP}`, 'success');
-                    return true;
-                    
-                } else if (EMAIL_SERVICE === 'emailjs') {
-                    // Real EmailJS implementation
-                    currentOTP = generateOTP();
-                    
-                    const templateParams = {
-                        to_email: email,
-                        otp_code: currentOTP,
-                        user_name: email.split('@')[0],
-                        company_name: 'Houston 100'
-                    };
-
-                    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
-                    showAuthMessage('✅ Verification code sent to your email!', 'success');
-                    return true;
-                    
-                } else if (EMAIL_SERVICE === 'backend') {
-                    // Your own backend API
-                    currentOTP = generateOTP();
-                    
-                    const response = await fetch('/api/send-otp', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email, otp: currentOTP })
-                    });
-                    
-                    if (!response.ok) throw new Error('Failed to send OTP');
-                    
-                    showAuthMessage('✅ Verification code sent to your email!', 'success');
-                    return true;
-                }
-                
-            } catch (error) {
-                console.error('OTP send error:', error);
-                showAuthMessage(`❌ Failed to send OTP: ${error.message}`, 'error');
-                return false;
-            }
+            // Simple demo authentication - always works for authorized users
+            currentOTP = '123456';
+            console.log('Setting OTP to:', currentOTP);
+            showAuthMessage(`✅ Verification code sent! Use: ${currentOTP}`, 'success');
+            return true;
         }
 
         function showAuthMessage(message, type) {
@@ -1776,11 +1739,23 @@
                 }
             });
 
-            // OTP handling
+            // OTP handling with better error checking
             document.querySelectorAll('.otp-input').forEach((input, index) => {
                 input.addEventListener('input', function(e) {
+                    // Only allow numbers
+                    e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                    
                     if (e.target.value.length === 1 && index < 5) {
                         document.querySelectorAll('.otp-input')[index + 1].focus();
+                    }
+                    
+                    // Check if all fields are filled
+                    const allFilled = Array.from(document.querySelectorAll('.otp-input'))
+                        .every(input => input.value.length === 1);
+                    
+                    if (allFilled) {
+                        // Auto-verify when all 6 digits are entered
+                        setTimeout(verifyOTP, 100);
                     }
                 });
                 
@@ -1788,29 +1763,39 @@
                     if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
                         document.querySelectorAll('.otp-input')[index - 1].focus();
                     }
+                    if (e.key === 'Enter') {
+                        verifyOTP();
+                    }
                 });
             });
 
-            document.getElementById('verifyOtpBtn').addEventListener('click', function() {
+            function verifyOTP() {
                 const enteredOTP = Array.from(document.querySelectorAll('.otp-input'))
                     .map(input => input.value).join('');
                 
                 console.log('Entered OTP:', enteredOTP);
                 console.log('Expected OTP:', currentOTP);
                 
+                if (enteredOTP.length !== 6) {
+                    showAuthMessage('❌ Please enter all 6 digits.', 'error');
+                    return;
+                }
+                
                 if (enteredOTP === currentOTP) {
                     const email = document.getElementById('email').value.toLowerCase().trim();
                     currentUser = { email: email };
-                    console.log('OTP verified, logging in user:', currentUser);
+                    console.log('✅ OTP verified, logging in user:', currentUser);
                     showMainApp(currentUser);
                     showAuthMessage('✅ Login successful! Welcome to Houston 100.', 'success');
                 } else {
-                    console.log('OTP verification failed');
+                    console.log('❌ OTP verification failed');
                     showAuthMessage('❌ Invalid verification code. Please try again.', 'error');
                     clearOTPInputs();
                     document.querySelectorAll('.otp-input')[0].focus();
                 }
-            });
+            }
+
+            document.getElementById('verifyOtpBtn').addEventListener('click', verifyOTP);
 
             document.getElementById('resendOtp').addEventListener('click', async function(e) {
                 e.preventDefault();
