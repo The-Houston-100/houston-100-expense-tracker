@@ -680,7 +680,7 @@
 <body>
     <!-- Live Airtable Connection Badge -->
     <div class="demo-badge" style="background: #28a745;">
-        🔗 LIVE MODE - Connected to Airtable
+        🔗 LIVE MODE - Airtable + Email Auth
     </div>
 
     <!-- Authentication Screen -->
@@ -1187,15 +1187,61 @@
             }
         ];
 
+        // Authentication Configuration
+        const EMAIL_SERVICE = 'demo'; // Options: 'demo', 'emailjs', 'backend'
+        const EMAILJS_SERVICE_ID = 'YOUR_EMAILJS_SERVICE_ID';
+        const EMAILJS_TEMPLATE_ID = 'YOUR_EMAILJS_TEMPLATE_ID';
+        const EMAILJS_PUBLIC_KEY = 'YOUR_EMAILJS_PUBLIC_KEY';
+
         // Traditional Authentication Functions
         function generateOTP() {
             return Math.floor(100000 + Math.random() * 900000).toString();
         }
 
         async function sendOTP(email) {
-            currentOTP = '123456'; // Demo OTP
-            showAuthMessage(`Demo mode: Your OTP is ${currentOTP}`, 'success');
-            return true;
+            try {
+                if (EMAIL_SERVICE === 'demo') {
+                    // Demo mode - always works
+                    currentOTP = '123456';
+                    showAuthMessage(`✅ Demo mode: Your OTP is ${currentOTP}`, 'success');
+                    return true;
+                    
+                } else if (EMAIL_SERVICE === 'emailjs') {
+                    // Real EmailJS implementation
+                    currentOTP = generateOTP();
+                    
+                    const templateParams = {
+                        to_email: email,
+                        otp_code: currentOTP,
+                        user_name: email.split('@')[0],
+                        company_name: 'Houston 100'
+                    };
+
+                    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
+                    showAuthMessage('✅ Verification code sent to your email!', 'success');
+                    return true;
+                    
+                } else if (EMAIL_SERVICE === 'backend') {
+                    // Your own backend API
+                    currentOTP = generateOTP();
+                    
+                    const response = await fetch('/api/send-otp', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, otp: currentOTP })
+                    });
+                    
+                    if (!response.ok) throw new Error('Failed to send OTP');
+                    
+                    showAuthMessage('✅ Verification code sent to your email!', 'success');
+                    return true;
+                }
+                
+            } catch (error) {
+                console.error('OTP send error:', error);
+                showAuthMessage(`❌ Failed to send OTP: ${error.message}`, 'error');
+                return false;
+            }
         }
 
         function showAuthMessage(message, type) {
@@ -1697,8 +1743,12 @@
                 const email = document.getElementById('email').value.toLowerCase().trim();
                 const sendBtn = document.getElementById('sendOtpBtn');
                 
+                console.log('Login attempt with email:', email);
+                console.log('Authorized users:', AUTHORIZED_USERS);
+                
                 if (!AUTHORIZED_USERS.includes(email)) {
-                    showAuthMessage('Access denied. Please contact Houston 100 administration.', 'error');
+                    showAuthMessage('❌ Access denied. Please contact Houston 100 administration for access.', 'error');
+                    console.log('Email not in authorized list');
                     return;
                 }
                 
@@ -1708,11 +1758,18 @@
                 try {
                     const success = await sendOTP(email);
                     if (success) {
+                        console.log('OTP sent successfully');
                         document.getElementById('emailForm').style.display = 'none';
                         document.getElementById('otpForm').style.display = 'block';
+                        
+                        // Focus on first OTP input
+                        setTimeout(() => {
+                            document.querySelectorAll('.otp-input')[0].focus();
+                        }, 100);
                     }
                 } catch (error) {
-                    showAuthMessage('Failed to send verification code. Please try again.', 'error');
+                    console.error('Send OTP error:', error);
+                    showAuthMessage('❌ Failed to send verification code. Please try again.', 'error');
                 } finally {
                     sendBtn.disabled = false;
                     sendBtn.textContent = 'Send Verification Code';
@@ -1738,12 +1795,18 @@
                 const enteredOTP = Array.from(document.querySelectorAll('.otp-input'))
                     .map(input => input.value).join('');
                 
+                console.log('Entered OTP:', enteredOTP);
+                console.log('Expected OTP:', currentOTP);
+                
                 if (enteredOTP === currentOTP) {
                     const email = document.getElementById('email').value.toLowerCase().trim();
                     currentUser = { email: email };
+                    console.log('OTP verified, logging in user:', currentUser);
                     showMainApp(currentUser);
+                    showAuthMessage('✅ Login successful! Welcome to Houston 100.', 'success');
                 } else {
-                    showAuthMessage('Invalid verification code. Please try again.', 'error');
+                    console.log('OTP verification failed');
+                    showAuthMessage('❌ Invalid verification code. Please try again.', 'error');
                     clearOTPInputs();
                     document.querySelectorAll('.otp-input')[0].focus();
                 }
