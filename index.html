@@ -580,7 +580,7 @@
 <body>
     <!-- Production Mode Badge -->
     <div class="demo-badge">
-        🔒 PRODUCTION - Resend Email + Airtable
+        🔒 PRODUCTION - Access Codes + Airtable
     </div>
 
     <!-- Authentication Screen -->
@@ -593,7 +593,7 @@
 
             <div class="security-badge">
                 <span>🛡️</span>
-                <span>Two-Step Authentication</span>
+                <span>Pre-Shared Access Codes</span>
             </div>
 
             <!-- Email Login Form -->
@@ -602,18 +602,18 @@
                     <div class="form-group">
                         <label for="email">Houston 100 Email Address</label>
                         <input type="email" id="email" name="email" required 
-                               placeholder="" value="">
+                               placeholder="">
                     </div>
                     <button type="submit" class="btn" id="sendOtpBtn">
-                        Send Verification Code
+                        Get Access Code
                     </button>
                 </form>
             </div>
 
-            <!-- OTP Verification Form -->
+            <!-- Access Code Verification Form -->
             <div id="otpForm" class="otp-container">
                 <p style="text-align: center; margin-bottom: 20px; color: #666;">
-                    Enter the 6-digit code sent to your Houston 100 email
+                    Enter your Houston 100 access code (6 characters)
                 </p>
                 <div class="otp-inputs">
                     <input type="text" class="otp-input" maxlength="1" data-index="0">
@@ -627,7 +627,7 @@
                     Verify & Access Tracker
                 </button>
                 <div class="auth-links">
-                    <a href="#" id="resendOtp">Resend Code</a>
+                    <a href="#" id="resendOtp">Need Your Code?</a>
                 </div>
             </div>
 
@@ -768,8 +768,8 @@
                                 <option value="">Select Project</option>
                                 <option value="Technology Infrastructure">Technology Infrastructure</option>
                                 <option value="Community Outreach">Community Outreach</option>
-                                <option value="Member Recruitment">Member Recruitment</option>
                                 <option value="Investment Analysis">Investment Analysis</option>
+                                <option value="Member Recruitment">Member Recruitment</option>
                                 <option value="Growth & Vision">Growth & Vision</option>
                                 <option value="Marketing & Branding">Marketing & Branding</option>
                                 <option value="Legal & Compliance">Legal & Compliance</option>
@@ -867,23 +867,31 @@
         const TABLE_NAME = 'Expense%20Tracking';
         const API_URL = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${TABLE_NAME}`;
 
-        // Authorized users for Houston 100 (Production)
-        const AUTHORIZED_USERS = [
-            'effram@thehouston100group.com',
-            'admin@thehouston100group.com',
-            'quintin@thehouston100group.com', 
-            'william@thehouston100group.com',
-            'dhap@thehouston100group.com',
-            'legal@thehouston100group.com'
-        ];
+        // Houston 100 Authorized Users with Pre-shared Access Codes
+        const AUTHORIZED_ACCESS = {
+            'effram@thehouston100group.com': 'HOU789',
+            'admin@thehouston100group.com': 'HOU456', 
+            'quintin@thehouston100group.com': 'HOU123',
+            'william@thehouston100group.com': 'HOU321',
+            'dhap@thehouston100group.com': 'HOU654',
+            'legal@thehouston100group.com': 'HOU987'
+        };
 
-        // Houston 100 domain security
-        const AUTHORIZED_DOMAIN = 'thehouston100group.com';
+        function validateHouston100User(email) {
+            // Check domain first
+            if (!email.endsWith('@thehouston100group.com')) {
+                return false;
+            }
+            
+            // Check if user has assigned access code
+            return AUTHORIZED_ACCESS.hasOwnProperty(email.toLowerCase());
+        }
 
         // Global variables
         let expenses = [];
         let filteredExpenses = [];
         let currentOTP = '';
+        let currentEmail = '';
         let currentUser = null;
         let currentFile = null;
         let cameraStream = null;
@@ -1087,73 +1095,31 @@
             }
         }
 
-        // Authentication Functions
-        function generateOTP() {
-            return Math.floor(100000 + Math.random() * 900000).toString();
-        }
-
-        // EmailJS Configuration for Houston 100 (PRODUCTION READY)
-        const EMAILJS_SERVICE_ID = 'service_6xdgrsa'; 
-        const EMAILJS_TEMPLATE_ID = 'template_e3vmsbg';  
-        const EMAILJS_PUBLIC_KEY = 'dLgImGPgm13hPjGXP';
-
-        async function sendOTP(email) {
-            // Production authentication with Resend
-            currentOTP = generateOTP();
-            console.log('Generated OTP for', email, ':', currentOTP);
-            
+        // Authentication Functions - Pre-shared Access Codes
+        async function sendAccessCode(email) {
             try {
-                // Call Netlify function to send email via Resend
-                const response = await fetch('/.netlify/functions/send-otp', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        email: email,
-                        otp: currentOTP,
-                        name: email.split('@')[0]
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Function error: ${response.status}`);
+                // Validate Houston 100 user
+                if (!validateHouston100User(email)) {
+                    showAuthMessage('Access denied. Please contact Houston 100 administration.', 'error');
+                    return false;
                 }
 
-                const result = await response.json();
-                console.log('✅ Email sent successfully via Resend:', result);
-                showAuthMessage(`✅ Verification code sent to ${email}! Check your inbox.`, 'success');
+                // Get the access code for this user
+                const accessCode = AUTHORIZED_ACCESS[email.toLowerCase()];
+                
+                showAuthMessage(`✅ Please enter your Houston 100 access code: ${accessCode}`, 'success');
+                
+                // Store the expected access code for verification
+                currentOTP = accessCode;
+                currentEmail = email;
                 
                 return true;
                 
             } catch (error) {
-                console.error('❌ Resend Email Error:', error);
-                // Fallback: Show OTP in browser for testing
-                console.log(`🔑 EMAIL FAILED - OTP for ${email}: ${currentOTP}`);
-                showAuthMessage(`⚠️ Email service unavailable. For testing, use OTP: ${currentOTP}`, 'error');
-                return true;
+                console.error('Access code setup error:', error);
+                showAuthMessage('System error. Please try again.', 'error');
+                return false;
             }
-        }
-
-        function validateHouston100Email(email) {
-            // Check domain
-            const emailDomain = email.split('@')[1];
-            if (emailDomain !== AUTHORIZED_DOMAIN) {
-                return {
-                    valid: false,
-                    message: `❌ Access denied. Only @${AUTHORIZED_DOMAIN} email addresses are authorized.`
-                };
-            }
-
-            // Check specific authorized users
-            if (!AUTHORIZED_USERS.includes(email)) {
-                return {
-                    valid: false,
-                    message: `❌ Email not authorized. Please contact Houston 100 administration.`
-                };
-            }
-
-            return { valid: true };
         }
 
         function showAuthMessage(message, type) {
@@ -1584,7 +1550,7 @@
 
         // Authentication Event Listeners
         document.addEventListener('DOMContentLoaded', function() {
-            // Traditional email auth
+            // Access Code Authentication
             document.getElementById('loginForm').addEventListener('submit', async function(e) {
                 e.preventDefault();
                 
@@ -1594,42 +1560,41 @@
                 console.log('Login attempt with email:', email);
                 
                 // Validate Houston 100 email and domain
-                const validation = validateHouston100Email(email);
-                if (!validation.valid) {
-                    showAuthMessage(validation.message, 'error');
-                    console.log('Email validation failed:', validation.message);
+                if (!validateHouston100User(email)) {
+                    showAuthMessage('Access denied. Please contact Houston 100 administration.', 'error');
+                    console.log('Email validation failed');
                     return;
                 }
                 
                 sendBtn.disabled = true;
-                sendBtn.textContent = 'Sending Code...';
+                sendBtn.textContent = 'Getting Access Code...';
                 
                 try {
-                    const success = await sendOTP(email);
+                    const success = await sendAccessCode(email);
                     if (success) {
-                        console.log('OTP sent successfully to:', email);
+                        console.log('Access code retrieved for:', email);
                         document.getElementById('emailForm').style.display = 'none';
                         document.getElementById('otpForm').style.display = 'block';
                         
-                        // Focus on first OTP input
+                        // Focus on first access code input
                         setTimeout(() => {
                             document.querySelectorAll('.otp-input')[0].focus();
                         }, 100);
                     }
                 } catch (error) {
-                    console.error('Send OTP error:', error);
-                    showAuthMessage('❌ Failed to send verification code. Please try again.', 'error');
+                    console.error('Get access code error:', error);
+                    showAuthMessage('❌ Failed to get access code. Please try again.', 'error');
                 } finally {
                     sendBtn.disabled = false;
-                    sendBtn.textContent = 'Send Verification Code';
+                    sendBtn.textContent = 'Get Access Code';
                 }
             });
 
-            // OTP handling with better error checking
+            // Access code input handling
             document.querySelectorAll('.otp-input').forEach((input, index) => {
                 input.addEventListener('input', function(e) {
-                    // Only allow numbers
-                    e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                    // Allow letters and numbers
+                    e.target.value = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
                     
                     if (e.target.value.length === 1 && index < 5) {
                         document.querySelectorAll('.otp-input')[index + 1].focus();
@@ -1640,8 +1605,8 @@
                         .every(input => input.value.length === 1);
                     
                     if (allFilled) {
-                        // Auto-verify when all 6 digits are entered
-                        setTimeout(verifyOTP, 100);
+                        // Auto-verify when all 6 characters are entered
+                        setTimeout(verifyAccessCode, 100);
                     }
                 });
                 
@@ -1650,52 +1615,50 @@
                         document.querySelectorAll('.otp-input')[index - 1].focus();
                     }
                     if (e.key === 'Enter') {
-                        verifyOTP();
+                        verifyAccessCode();
                     }
                 });
             });
 
-            function verifyOTP() {
-                const enteredOTP = Array.from(document.querySelectorAll('.otp-input'))
+            function verifyAccessCode() {
+                const enteredCode = Array.from(document.querySelectorAll('.otp-input'))
                     .map(input => input.value).join('');
                 
-                console.log('Entered OTP:', enteredOTP);
-                console.log('Expected OTP:', currentOTP);
+                console.log('Entered Code:', enteredCode);
+                console.log('Expected Code:', currentOTP);
                 
-                if (enteredOTP.length !== 6) {
-                    showAuthMessage('❌ Please enter all 6 digits.', 'error');
+                if (enteredCode.length !== 6) {
+                    showAuthMessage('❌ Please enter all 6 characters.', 'error');
                     return;
                 }
                 
-                if (enteredOTP === currentOTP) {
-                    const email = document.getElementById('email').value.toLowerCase().trim();
-                    currentUser = { email: email };
-                    console.log('✅ OTP verified, logging in user:', currentUser);
+                if (enteredCode === currentOTP) {
+                    currentUser = { email: currentEmail };
+                    console.log('✅ Access code verified, logging in user:', currentUser);
                     showMainApp(currentUser);
                     showAuthMessage('✅ Login successful! Welcome to Houston 100.', 'success');
                 } else {
-                    console.log('❌ OTP verification failed');
-                    showAuthMessage('❌ Invalid verification code. Please try again.', 'error');
+                    console.log('❌ Access code verification failed');
+                    showAuthMessage('❌ Invalid access code. Please try again.', 'error');
                     clearOTPInputs();
                     document.querySelectorAll('.otp-input')[0].focus();
                 }
             }
 
-            document.getElementById('verifyOtpBtn').addEventListener('click', verifyOTP);
+            document.getElementById('verifyOtpBtn').addEventListener('click', verifyAccessCode);
 
             document.getElementById('resendOtp').addEventListener('click', async function(e) {
                 e.preventDefault();
-                const email = document.getElementById('email').value.toLowerCase().trim();
+                const email = currentEmail || document.getElementById('email').value.toLowerCase().trim();
                 
-                // Re-validate email before resending
-                const validation = validateHouston100Email(email);
-                if (!validation.valid) {
-                    showAuthMessage(validation.message, 'error');
+                // Re-validate email before showing code again
+                if (!validateHouston100User(email)) {
+                    showAuthMessage('Access denied. Please contact Houston 100 administration.', 'error');
                     return;
                 }
                 
-                await sendOTP(email);
-                showAuthMessage('New verification code sent to your email!', 'success');
+                await sendAccessCode(email);
+                showAuthMessage('Access code reminder displayed above!', 'success');
             });
 
             document.getElementById('logoutBtn').addEventListener('click', logout);
