@@ -1107,15 +1107,16 @@
                 // Initialize EmailJS
                 emailjs.init(EMAILJS_PUBLIC_KEY);
                 
-                // Send email via EmailJS
+                // Send email via EmailJS - matching template parameters exactly
                 const templateParams = {
                     to_email: email,
                     to_name: email.split('@')[0],
                     otp_code: currentOTP,
-                    company_name: 'Houston 100 Group',
-                    from_name: 'Houston 100 Security'
+                    name: email.split('@')[0] // Adding this parameter that template expects
                 };
 
+                console.log('Sending email with params:', templateParams);
+                
                 const response = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
                 console.log('✅ Email sent successfully via EmailJS:', response);
                 showAuthMessage(`✅ Verification code sent to ${email}!`, 'success');
@@ -1123,7 +1124,7 @@
                 return true;
                 
             } catch (error) {
-                console.error('❌ Email sending failed:', error);
+                console.error('❌ EmailJS Error Details:', error);
                 // Fallback: Show OTP in browser for testing
                 console.log(`🔑 EMAIL FAILED - OTP for ${email}: ${currentOTP}`);
                 showAuthMessage(`⚠️ Email failed to send. For testing, use OTP: ${currentOTP}`, 'error');
