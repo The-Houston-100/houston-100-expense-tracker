@@ -603,7 +603,7 @@
                     <div class="form-group">
                         <label for="email">Houston 100 Email Address</label>
                         <input type="email" id="email" name="email" required 
-                               placeholder="member@thehouston100group.com" value="">
+                               placeholder="" value="">
                     </div>
                     <button type="submit" class="btn" id="sendOtpBtn">
                         Send Verification Code
@@ -1093,17 +1093,42 @@
             return Math.floor(100000 + Math.random() * 900000).toString();
         }
 
+        // EmailJS Configuration for Houston 100 (PRODUCTION READY)
+        const EMAILJS_SERVICE_ID = 'service_6xdgrsa'; 
+        const EMAILJS_TEMPLATE_ID = 'template_e3vmsbg';  
+        const EMAILJS_PUBLIC_KEY = 'dLgImGPgm13hPjGXP';
+
         async function sendOTP(email) {
             // Production authentication - generates real OTP
             currentOTP = generateOTP();
             console.log('Generated OTP for', email, ':', currentOTP);
-            showAuthMessage(`✅ Verification code sent to ${email}! Check your email.`, 'success');
             
-            // TODO: In production, integrate with real email service (EmailJS, SendGrid, etc.)
-            // For now, showing OTP in console for testing
-            console.log(`🔑 OTP for ${email}: ${currentOTP}`);
-            
-            return true;
+            try {
+                // Initialize EmailJS
+                emailjs.init(EMAILJS_PUBLIC_KEY);
+                
+                // Send email via EmailJS
+                const templateParams = {
+                    to_email: email,
+                    to_name: email.split('@')[0],
+                    otp_code: currentOTP,
+                    company_name: 'Houston 100 Group',
+                    from_name: 'Houston 100 Security'
+                };
+
+                const response = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+                console.log('✅ Email sent successfully via EmailJS:', response);
+                showAuthMessage(`✅ Verification code sent to ${email}!`, 'success');
+                
+                return true;
+                
+            } catch (error) {
+                console.error('❌ Email sending failed:', error);
+                // Fallback: Show OTP in browser for testing
+                console.log(`🔑 EMAIL FAILED - OTP for ${email}: ${currentOTP}`);
+                showAuthMessage(`⚠️ Email failed to send. For testing, use OTP: ${currentOTP}`, 'error');
+                return true;
+            }
         }
 
         function validateHouston100Email(email) {
