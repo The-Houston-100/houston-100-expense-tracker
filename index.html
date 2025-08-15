@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Houston 100 Expense Tracker - Secure Access</title>
-    <script src="https://cdn.emailjs.com/dist/email.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <style>
         * {
@@ -581,7 +580,7 @@
 <body>
     <!-- Production Mode Badge -->
     <div class="demo-badge">
-        🔒 PRODUCTION - Houston 100 Group
+        🔒 PRODUCTION - Resend Email + Airtable
     </div>
 
     <!-- Authentication Screen -->
@@ -1099,35 +1098,39 @@
         const EMAILJS_PUBLIC_KEY = 'dLgImGPgm13hPjGXP';
 
         async function sendOTP(email) {
-            // Production authentication - generates real OTP
+            // Production authentication with Resend
             currentOTP = generateOTP();
             console.log('Generated OTP for', email, ':', currentOTP);
             
             try {
-                // Initialize EmailJS
-                emailjs.init(EMAILJS_PUBLIC_KEY);
-                
-                // Send email via EmailJS - matching template parameters exactly
-                const templateParams = {
-                    to_email: email,
-                    to_name: email.split('@')[0],
-                    otp_code: currentOTP,
-                    name: email.split('@')[0] // Adding this parameter that template expects
-                };
+                // Call Netlify function to send email via Resend
+                const response = await fetch('/.netlify/functions/send-otp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        otp: currentOTP,
+                        name: email.split('@')[0]
+                    })
+                });
 
-                console.log('Sending email with params:', templateParams);
-                
-                const response = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
-                console.log('✅ Email sent successfully via EmailJS:', response);
-                showAuthMessage(`✅ Verification code sent to ${email}!`, 'success');
+                if (!response.ok) {
+                    throw new Error(`Function error: ${response.status}`);
+                }
+
+                const result = await response.json();
+                console.log('✅ Email sent successfully via Resend:', result);
+                showAuthMessage(`✅ Verification code sent to ${email}! Check your inbox.`, 'success');
                 
                 return true;
                 
             } catch (error) {
-                console.error('❌ EmailJS Error Details:', error);
+                console.error('❌ Resend Email Error:', error);
                 // Fallback: Show OTP in browser for testing
                 console.log(`🔑 EMAIL FAILED - OTP for ${email}: ${currentOTP}`);
-                showAuthMessage(`⚠️ Email failed to send. For testing, use OTP: ${currentOTP}`, 'error');
+                showAuthMessage(`⚠️ Email service unavailable. For testing, use OTP: ${currentOTP}`, 'error');
                 return true;
             }
         }
